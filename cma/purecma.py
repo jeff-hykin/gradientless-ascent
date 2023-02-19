@@ -8,7 +8,7 @@ The **main functionality** is implemented in
 
 1. class `CMAES`, and
 
-2. function `fmin` which is a small single-line-usage wrapper around
+2. function `find_minimizing_values` which is a small single-line-usage wrapper around
    `CMAES`.
 
 This code has two **purposes**:
@@ -45,293 +45,269 @@ This code is released into the public domain (that is, you may
 use and modify it however you like).
 
 """
-from __future__ import division  # such that 1/2 != 0
-from __future__ import print_function  # available since 2.6, not needed
 
 ___author__ = "Nikolaus Hansen"
 __license__ = "public domain"
+__version__ = "3.0.0"
 
-from sys import stdout as _stdout  # not strictly necessary
-import warnings as _warnings
 from math import log, exp
 from random import normalvariate as random_normalvariate
+import numbers
 
-try:
-    from .interfaces import OOOptimizer, BaseDataLogger as _BaseDataLogger
-except (ImportError, ValueError):
-    OOOptimizer, _BaseDataLogger = object, object
-try:
-    from .recombination_weights import RecombinationWeights
-except (ImportError, ValueError):
-    RecombinationWeights = None
-del division, print_function  # , absolute_import, unicode_literals, with_statement
+def find_minimizing_values(objective_function, inital_solution, sigma, args=(), max_function_evaluations="1e3 * N**2", fitness_target=None):
+    """
+        non-linear non-convex minimization procedure, a functional
+        interface to CMA-ES.
 
-__version__ = "3.0.0"
-__author__ = "Nikolaus Hansen"
-__docformat__ = "reStructuredText"
+        Parameters
+        ==========
+            `objective_function`: `callable`
+                a function that takes as input a `list` of floats (like
+                [3.0, 2.2, 1.1]) and returns a single `float` (a scalar).
+                The objective is to find ``x`` with ``objective_function(x)``
+                to be as small as possible.
+            `inital_solution`: `list` or sequence
+                list of numbers (like `[3.2, 2, 1]`), initial solution vector,
+                its length defines the search space dimension.
+            `sigma`: `float`
+                initial step-size, standard deviation in any coordinate
+            `args`: `tuple` or sequence
+                additional (optional) arguments passed to `objective_function`
+            `fitness_target`: `float`
+                target function value
+            `max_function_evaluations`: `int` or `str`
+                maximal number of function evaluations, a string
+                is evaluated with ``N`` as search space dimension
 
+        Return
+        ======
+        The `tuple` (``xmin``:`list`, ``es``:`CMAES`), where ``xmin`` is the
+        best seen (evaluated) solution and ``es`` is the correspoding `CMAES`
+        instance. Consult ``help(es.result)`` of property `result` for further
+        results.
 
-def fmin(objective_fct, xstart, sigma, args=(), maxfevals="1e3 * N**2", ftarget=None, verb_disp=100, verb_log=1, verb_save=1000):
-    """non-linear non-convex minimization procedure, a functional
-    interface to CMA-ES.
+        Example
+        =======
+        The following example minimizes the function `ff.elli`:
 
-    Parameters
-    ==========
-        `objective_fct`: `callable`
-            a function that takes as input a `list` of floats (like
-            [3.0, 2.2, 1.1]) and returns a single `float` (a scalar).
-            The objective is to find ``x`` with ``objective_fct(x)``
-            to be as small as possible.
-        `xstart`: `list` or sequence
-            list of numbers (like `[3.2, 2, 1]`), initial solution vector,
-            its length defines the search space dimension.
-        `sigma`: `float`
-            initial step-size, standard deviation in any coordinate
-        `args`: `tuple` or sequence
-            additional (optional) arguments passed to `objective_fct`
-        `ftarget`: `float`
-            target function value
-        `maxfevals`: `int` or `str`
-            maximal number of function evaluations, a string
-            is evaluated with ``N`` as search space dimension
-        `verb_disp`: `int`
-            display on console every `verb_disp` iteration, 0 for never
-        `verb_log`: `int`
-            data logging every `verb_log` iteration, 0 for never
-        `verb_save`: `int`
-            save logged data every ``verb_save * verb_log`` iteration
+        >>> try: import cma.purecma as purecma
+        ... except ImportError: import purecma
+        >>> def felli(x):
+        ...     return sum(10**(6 * i / (len(x)-1)) * xi**2
+        ...                for i, xi in enumerate(x))
+        >>> res = purecma.find_minimizing_values(felli, 3 * [0.5], 0.3)  # doctest:+SKIP
+        evals: ax-ratio max(std)   f-value
+            7:     1.0  3.4e-01  240.2716966
+        14:     1.0  3.9e-01  2341.50170536
+        700:   247.9  2.4e-01  0.629102574062
+        1400:  1185.9  5.3e-07  4.83466373808e-13
+        1421:  1131.2  2.9e-07  5.50167024417e-14
+        termination by {'tolfun': 1e-12}
+        best f-value = 2.72976881789e-14
+        solution = [5.284564665206811e-08, 2.4608091035303e-09, -1.3582873173543187e-10]
+        >>> print(res[0])  # doctest:+SKIP
+        [5.284564665206811e-08, 2.4608091035303e-09, -1.3582873173543187e-10]
+        >>> res[1].result[1])  # doctest:+SKIP
+        2.72976881789e-14
 
-    Return
-    ======
-    The `tuple` (``xmin``:`list`, ``es``:`CMAES`), where ``xmin`` is the
-    best seen (evaluated) solution and ``es`` is the correspoding `CMAES`
-    instance. Consult ``help(es.result)`` of property `result` for further
-    results.
+        Details
+        =======
+        After importing `purecma`, this call:
 
-    Example
-    =======
-    The following example minimizes the function `ff.elli`:
+        >>> es = purecma.find_minimizing_values(pcma.ff.elli, 10 * [0.5], 0.3)[1]  # doctest:+SKIP
 
-    >>> try: import cma.purecma as purecma
-    ... except ImportError: import purecma
-    >>> def felli(x):
-    ...     return sum(10**(6 * i / (len(x)-1)) * xi**2
-    ...                for i, xi in enumerate(x))
-    >>> res = purecma.fmin(felli, 3 * [0.5], 0.3, verb_disp=100)  # doctest:+SKIP
-    evals: ax-ratio max(std)   f-value
-        7:     1.0  3.4e-01  240.2716966
-       14:     1.0  3.9e-01  2341.50170536
-      700:   247.9  2.4e-01  0.629102574062
-     1400:  1185.9  5.3e-07  4.83466373808e-13
-     1421:  1131.2  2.9e-07  5.50167024417e-14
-    termination by {'tolfun': 1e-12}
-    best f-value = 2.72976881789e-14
-    solution = [5.284564665206811e-08, 2.4608091035303e-09, -1.3582873173543187e-10]
-    >>> print(res[0])  # doctest:+SKIP
-    [5.284564665206811e-08, 2.4608091035303e-09, -1.3582873173543187e-10]
-    >>> res[1].result[1])  # doctest:+SKIP
-    2.72976881789e-14
-    >>> res[1].logger.plot()  # doctest:+SKIP
+        and these lines:
 
-    Details
-    =======
-    After importing `purecma`, this call:
+        >>> es = purecma.CMAES(10 * [0.5], 0.3)
+        >>> es.optimize(purecma.ff.elli)  # doctest:+SKIP
 
-    >>> es = purecma.fmin(pcma.ff.elli, 10 * [0.5], 0.3, verb_save=0)[1]  # doctest:+SKIP
+        :See: `CMAES`, `OOOptimizer`.
+    """
+    decender = CMAES(inital_solution, sigma, max_function_evaluations=max_function_evaluations, fitness_target=fitness_target)
+    while not decender.stop():
+        candidate_solutions = decender.ask()  # get a list of sampled candidate solutions
+        fit = [ objective_function(x, *args) for x in candidate_solutions ]  # evaluate candidates
+        decender.tell(candidate_solutions, fit)  # update distribution parameters
 
-    and these lines:
-
-    >>> es = purecma.CMAES(10 * [0.5], 0.3)
-    >>> es.optimize(purecma.ff.elli, callback=es.logger.add)  # doctest:+SKIP
-
-    do pretty much the same. The `verb_save` parameter to `fmin` adds
-    the possibility to plot the saved data *during* the execution from a
-    different Python shell like ``pcma.CMAESDataLogger().load().plot()``.
-    For example, with ``verb_save == 3`` every third time the logger
-    records data they are saved to disk as well.
-
-    :See: `CMAES`, `OOOptimizer`."""
-    es = CMAES(xstart, sigma, maxfevals=maxfevals, ftarget=ftarget)
-    if verb_log:  # prepare data logging
-        es.logger = CMAESDataLogger(verb_log).add(es, force=True)
-    while not es.stop():
-        X = es.ask()  # get a list of sampled candidate solutions
-        fit = [objective_fct(x, *args) for x in X]  # evaluate candidates
-        es.tell(X, fit)  # update distribution parameters
-
-        # that's it! The remainder is managing output behavior only.
-        es.disp(verb_disp)
-        if verb_log:
-            if es.counteval / es.params.lam % verb_log < 1:
-                es.logger.add(es)
-            if verb_save and (es.counteval / es.params.lam % (verb_save * verb_log) < 1):
-                es.logger.save()
-
-    if verb_disp:  # do not print by default to allow silent verbosity
-        es.disp(1)
-        print("termination by", es.stop())
-        print("best f-value =", es.result[1])
-        print("solution =", es.result[0])
-    if verb_log:
-        es.logger.add(es, force=True)
-        es.logger.save() if verb_save else None
-    return [es.best.x if es.best.f < objective_fct(es.xmean) else es.xmean, es]
+    return [ decender.best.x if decender.best.f < objective_function(decender.xmean) else decender.xmean, decender ]
 
 
-class CMAESParameters(object):
+class CmaesParameters:
     """static "internal" parameter setting for `CMAES`"""
 
-    default_popsize = "4 + int(3 * log(N))"
+    default_popsize = lambda number_of_dimensions: 4 + int(3 * log(number_of_dimensions))
 
-    def __init__(self, N, popsize=None, RecombinationWeights=None):
-        """set static, fixed "strategy" parameters once and for all.
-
-        Input parameter ``RecombinationWeights`` may be set to the class
-        `RecombinationWeights`.
-        """
-        self.dimension = N
-        self.chiN = N**0.5 * (1 - 1.0 / (4 * N) + 1.0 / (21 * N**2))
+    def __init__(self, number_of_dimensions, popsize=None):
+        """set static, fixed "strategy" parameters once and for all."""
+        # 
+        # convert popsize
+        # 
+        if isinstance(popsize, (int, float)):
+            popsize = int(popsize)
+        elif callable(popsize):
+            popsize = popsize(number_of_dimensions)
+        elif type(popsize) == type(None):
+            popsize = CmaesParameters.default_popsize(number_of_dimensions)
+        else:
+            raise Exception(f'''
+                popsize should either be an integer or a function that accepts number_of_dimensions as an argument
+                ex: popsize = lambda number_of_dimensions: math.log(number_of_dimensions) + 10
+                Instead I got popsize of: {popsize}
+            ''')
+        
+        self.dimension = number_of_dimensions
 
         # Strategy parameter setting: Selection
-        self.lam = eval(safe_str(popsize if popsize else CMAESParameters.default_popsize, {"int": "int", "log": "log", "N": N}))
+            
+        self.lam = popsize
         self.mu = int(self.lam / 2)  # number of parents/points/solutions for recombination
-        if RecombinationWeights:
-            self.weights = RecombinationWeights(self.lam)
-            self.mueff = self.weights.mueff
-        else:  # set non-negative recombination weights "manually"
-            _weights = [log(self.lam / 2 + 0.5) - log(i + 1) if i < self.mu else 0 for i in range(self.lam)]
-            w_sum = sum(_weights[: self.mu])
-            self.weights = [w / w_sum for w in _weights]  # sum is one now
-            self.mueff = sum(self.weights[: self.mu]) ** 2 / sum(w**2 for w in self.weights[: self.mu])  # variance-effectiveness of sum w_i x_i
+        _weights = [log(self.lam / 2 + 0.5) - log(i + 1) if i < self.mu else 0 for i in range(self.lam)]
+        w_sum = sum(_weights[: self.mu])
+        self.weights = [w / w_sum for w in _weights]  # sum is one now
+        self.mueff = sum(self.weights[: self.mu]) ** 2 / sum(w**2 for w in self.weights[: self.mu])  # variance-effectiveness of sum w_i x_i
 
         # Strategy parameter setting: Adaptation
-        self.cc = (4 + self.mueff / N) / (N + 4 + 2 * self.mueff / N)  # time constant for cumulation for C
-        self.cs = (self.mueff + 2) / (N + self.mueff + 5)  # time constant for cumulation for sigma control
-        self.c1 = 2 / ((N + 1.3) ** 2 + self.mueff)  # learning rate for rank-one update of C
-        self.cmu = min([1 - self.c1, 2 * (self.mueff - 2 + 1 / self.mueff) / ((N + 2) ** 2 + self.mueff)])  # and for rank-mu update
+        self.cc = (4 + self.mueff / number_of_dimensions) / (number_of_dimensions + 4 + 2 * self.mueff / number_of_dimensions)  # time constant for cumulation for C
+        self.cs = (self.mueff + 2) / (number_of_dimensions + self.mueff + 5)  # time constant for cumulation for sigma control
+        self.c1 = 2 / ((number_of_dimensions + 1.3) ** 2 + self.mueff)  # learning rate for rank-one update of C
+        self.cmu = min([1 - self.c1, 2 * (self.mueff - 2 + 1 / self.mueff) / ((number_of_dimensions + 2) ** 2 + self.mueff)])  # and for rank-mu update
         self.damps = 2 * self.mueff / self.lam + 0.3 + self.cs  # damping for sigma, usually close to 1
 
-        if RecombinationWeights:
-            self.weights.finalize_negative_weights(N, self.c1, self.cmu)
-        # gap to postpone eigendecomposition to achieve O(N**2) per eval
+        # gap to postpone eigendecomposition to achieve O(number_of_dimensions**2) per eval
         # 0.5 is chosen such that eig takes 2 times the time of tell in >=20-D
-        self.lazy_gap_evals = 0.5 * N * self.lam * (self.c1 + self.cmu) ** -1 / N**2
+        self.lazy_gap_evals = 0.5 * number_of_dimensions * self.lam * (self.c1 + self.cmu) ** -1 / N**2
 
 
-class CMAES(OOOptimizer):  # could also inherit from object
-    """class for non-linear non-convex numerical minimization with CMA-ES.
+class CMAES:  # could also inherit from object
+    """
+        class for non-linear non-convex numerical minimization with CMA-ES.
 
-    The class implements the interface define in `OOOptimizer`, namely
-    the methods `__init__`, `ask`, `tell`, `stop`, `disp` and property
-    `result`.
+        the methods `__init__`, `ask`, `tell`, `stop`, and property `result`.
 
-    Examples
-    --------
+        Examples
+        --------
 
-    The Jupyter notebook or IPython are the favorite environments to
-    execute these examples, both in ``%pylab`` mode. All examples
-    minimize the function `elli`, output is not shown.
+        The Jupyter notebook or IPython are the favorite environments to
+        execute these examples, both in ``%pylab`` mode. All examples
+        minimize the function `elli`, output is not shown.
 
-    First we need to import the module we want to use. We import `purecma`
-    from `cma` as (aliased to) ``pcma``::
+        First we need to import the module we want to use. We import `purecma`
+        from `cma` as (aliased to) ``pcma``::
 
-        from cma import purecma as pcma
+            from cma import purecma as pcma
 
-    The shortest example uses the inherited method
-    `OOOptimizer.optimize`::
+        The shortest example uses the inherited method
+        `OOOptimizer.optimize`::
 
-        es = pcma.CMAES(8 * [0.1], 0.5).optimize(pcma.ff.elli)
+            es = pcma.CMAES(8 * [0.1], 0.5).optimize(pcma.ff.elli)
 
-    See method `CMAES.__init__` for a documentation of the input
-    parameters to `CMAES`. We might have a look at the result::
+        See method `CMAES.__init__` for a documentation of the input
+        parameters to `CMAES`. We might have a look at the result::
 
-        print(es.result[0])  # best solution and
-        print(es.result[1])  # its function value
+            print(es.result[0])  # best solution and
+            print(es.result[1])  # its function value
 
-    `result` is a property of `CMAES`. In order to display more exciting
-    output, we may use the `CMAESDataLogger` instance in the `logger`
-    attribute of `CMAES`::
+        Virtually the same example can be written with an explicit loop
+        instead of using `optimize`, see also `find_minimizing_values`. This gives insight
+        into the `CMAES` class interface and entire control over the
+        iteration loop::
 
-        es.logger.plot()  # if matplotlib is available
+            pcma.find_minimizing_values??  # print source, works in jupyter/ipython only
+            es = pcma.CMAES(9 * [0.5], 0.3)  # calls CMAES.__init__()
 
-    Virtually the same example can be written with an explicit loop
-    instead of using `optimize`, see also `fmin`. This gives insight
-    into the `CMAES` class interface and entire control over the
-    iteration loop::
+            # this loop resembles the method optimize
+            while not es.stop():  # iterate
+                X = es.ask()      # get candidate solutions
+                f = [pcma.ff.elli(x) for x in X]  # evaluate solutions
+                es.tell(X, f)     # do all the real work
 
-        pcma.fmin??  # print source, works in jupyter/ipython only
-        es = pcma.CMAES(9 * [0.5], 0.3)  # calls CMAES.__init__()
+            # final output
+            print('termination by', es.stop())
+            print('best f-value =', es.result[1])
+            print('best solution =', es.result[0])
 
-        # this loop resembles the method optimize
-        while not es.stop():  # iterate
-            X = es.ask()      # get candidate solutions
-            f = [pcma.ff.elli(x) for x in X]  # evaluate solutions
-            es.tell(X, f)     # do all the real work
-            es.disp(20)       # display info every 20th iteration
-            es.logger.add(es) # log another "data line"
+            print('potentially better solution xmean =', es.result[5])
+            print("let's check f(xmean) = ", pcma.ff.elli(es.result[5]))
 
-        # final output
-        print('termination by', es.stop())
-        print('best f-value =', es.result[1])
-        print('best solution =', es.result[0])
+        A very similar example which may also save the logged data within
+        the loop is the implementation of function `find_minimizing_values`.
 
-        print('potentially better solution xmean =', es.result[5])
-        print("let's check f(xmean) = ", pcma.ff.elli(es.result[5]))
-        es.logger.plot()  # if matplotlib is available
+        Details
+        -------
+        Most of the work is done in the method `tell`. The property
+        `result` contains more useful output.
 
-    A very similar example which may also save the logged data within
-    the loop is the implementation of function `fmin`.
-
-    Details
-    -------
-    Most of the work is done in the method `tell`. The property
-    `result` contains more useful output.
-
-    :See: `fmin`, `OOOptimizer.optimize`
+        :See: `find_minimizing_values`, `OOOptimizer.optimize`
 
     """
 
-    def __init__(self, xstart, sigma, popsize=CMAESParameters.default_popsize, ftarget=None, maxfevals="100 * popsize + " "150 * (N + 3)**2 * popsize**0.5", randn=random_normalvariate):  # mandatory  # 100 iterations plus...
-        """Instantiate `CMAES` object instance using `xstart` and `sigma`.
+    def __init__(
+        self,
+        inital_solution,
+        sigma,
+        popsize=CmaesParameters.default_popsize,
+        fitness_target=None,
+        max_function_evaluations=(
+            lambda popsize, number_of_dimensions: 100 * popsize + 150 * (number_of_dimensions + 3)**2 * popsize**0.5
+        ),
+        randn=random_normalvariate,
+    ):  # mandatory  # 100 iterations plus...
+        """
+            Instantiate `CMAES` object instance using `inital_solution` and `sigma`.
 
-        Parameters
-        ----------
-            `xstart`: `list`
-                of numbers (like ``[3, 2, 1.2]``), initial
-                solution vector
-            `sigma`: `float`
-                initial step-size (standard deviation in each coordinate)
-            `popsize`: `int` or `str`
-                population size, number of candidate samples per iteration
-            `maxfevals`: `int` or `str`
-                maximal number of function evaluations, a string is
-                evaluated with ``N`` as search space dimension
-            `ftarget`: `float`
-                target function value
-            `randn`: `callable`
-                normal random number generator, by default
-                `random.normalvariate`
+            Parameters
+            ----------
+                `inital_solution`: `list`
+                    of numbers (like ``[3, 2, 1.2]``), initial
+                    solution vector
+                `sigma`: `float`
+                    initial step-size (standard deviation in each coordinate)
+                `popsize`: `int` or `str`
+                    population size, number of candidate samples per iteration
+                `max_function_evaluations`: `int` or function
+                    maximal number of function evaluations, a string is
+                    evaluated with ``number_of_dimensions`` as search space dimension
+                `fitness_target`: `float`
+                    target function value
+                `randn`: `callable`
+                    normal random number generator, by default
+                    `random.normalvariate`
 
-        Details: this method initializes the dynamic state variables and
-        creates a `CMAESParameters` instance for static parameters.
+            Details: this method initializes the dynamic state variables and
+            creates a `CmaesParameters` instance for static parameters.
         """
         # process some input parameters and set static parameters
-        N = len(xstart)  # number of objective variables/problem dimension
-        self.params = CMAESParameters(N, popsize)
-        self.maxfevals = eval(safe_str(maxfevals, known_words={"N": N, "popsize": self.params.lam}))
-        self.ftarget = ftarget  # stop if fitness <= ftarget
+        number_of_dimensions = len(inital_solution)  # number of objective variables/problem dimension
+        self.params = CmaesParameters(number_of_dimensions, popsize)
+        
+        # 
+        # convert max_function_evaluations
+        # 
+        if isinstance(max_function_evaluations, (int, float)):
+            max_function_evaluations = int(max_function_evaluations)
+        elif callable(max_function_evaluations):
+            max_function_evaluations = max_function_evaluations(number_of_dimensions, self.params.lam)
+        else:
+            raise Exception(f'''
+                max_function_evaluations should either be an integer
+                or a function that accepts number_of_dimensions and popsize as arguments
+                ex: max_function_evaluations = lambda number_of_dimensions, popsize: math.log(number_of_dimensions) + 10
+                Instead I got a max_function_evaluations of: {max_function_evaluations}
+            ''')
+            
+        self.max_function_evaluations = max_function_evaluations
+        self.fitness_target = fitness_target  # stop if fitness <= fitness_target
         self.randn = randn
 
         # initializing dynamic state variables
-        self.xmean = xstart[:]  # initial point, distribution mean, a copy
+        self.xmean = inital_solution[:]  # initial point, distribution mean, a copy
         self.sigma = sigma
-        self.pc = N * [0]  # evolution path for C
-        self.ps = N * [0]  # and for sigma
-        self.C = DecomposingPositiveMatrix(N)  # covariance matrix
-        self.counteval = 0  # countiter should be equal to counteval / lam
-        self.fitvals = []  # for bookkeeping output and termination
+        self.pc = number_of_dimensions * [0]  # evolution path for C
+        self.ps = number_of_dimensions * [0]  # and for sigma
+        self.C = DecomposingPositiveMatrix(number_of_dimensions)  # covariance matrix
+        self.count_eval = 0  # countiter should be equal to counteval / lam
+        self.fit_vals = []  # for bookkeeping output and termination
         self.best = BestSolution()
-        self.logger = CMAESDataLogger()  # for convenience and output
 
     def ask(self):
         """sample lambda candidate solutions
@@ -343,7 +319,7 @@ class CMAES(OOOptimizer):  # could also inherit from object
 
         and return a `list` of the sampled "vectors".
         """
-        self.C.update_eigensystem(self.counteval, self.params.lazy_gap_evals)
+        self.C.update_eigensystem(self.count_eval, self.params.lazy_gap_evals)
         candidate_solutions = []
         for _k in range(self.params.lam):  # repeat lam times
             z = [self.sigma * eigenval**0.5 * self.randn(0, 1) for eigenval in self.C.eigenvalues]
@@ -365,23 +341,23 @@ class CMAES(OOOptimizer):  # could also inherit from object
                 the corresponding objective function values, to be
                 minimised
         """
-        ### bookkeeping and convenience short cuts
-        self.counteval += len(fitvals)  # evaluations used within tell
+        # bookkeeping and convenience short cuts
+        self.count_eval += len(fitvals)  # evaluations used within tell
         N = len(self.xmean)
         par = self.params
         xold = self.xmean  # not a copy, xmean is assigned anew later
 
-        ### Sort by fitness
+        # Sort by fitness
         arx = [arx[k] for k in argsort(fitvals)]  # sorted arx
-        self.fitvals = sorted(fitvals)  # used for termination and display only
-        self.best.update(arx[0], self.fitvals[0], self.counteval)
+        self.fit_vals = sorted(fitvals)  # used for termination and display only
+        self.best.update(arx[0], self.fit_vals[0], self.count_eval)
 
-        ### recombination, compute new weighted mean value
+        # recombination, compute new weighted mean value
         self.xmean = dot(arx[0 : par.mu], par.weights[: par.mu], transpose=True)
         #          = [sum(self.weights[k] * arx[k][i] for k in range(self.mu))
         #                                             for i in range(N)]
 
-        ### Cumulation: update evolution paths
+        # Cumulation: update evolution paths
         y = minus(self.xmean, xold)
         z = dot(self.C.invsqrt, y)  # == C**(-1/2) * (xnew - xold)
         csn = (par.cs * (2 - par.cs) * par.mueff) ** 0.5 / self.sigma
@@ -389,11 +365,11 @@ class CMAES(OOOptimizer):  # could also inherit from object
             self.ps[i] = (1 - par.cs) * self.ps[i] + csn * z[i]
         ccn = (par.cc * (2 - par.cc) * par.mueff) ** 0.5 / self.sigma
         # turn off rank-one accumulation when sigma increases quickly
-        hsig = sum(x**2 for x in self.ps) / N / (1 - (1 - par.cs) ** (2 * self.counteval / par.lam)) < 2 + 4.0 / (N + 1)  # ||ps||^2 / N is 1 in expectation  # account for initial value of ps  # should be smaller than 2 + ...
+        hsig = sum(x**2 for x in self.ps) / N / (1 - (1 - par.cs) ** (2 * self.count_eval / par.lam)) < 2 + 4.0 / (N + 1)  # ||ps||^2 / N is 1 in expectation  # account for initial value of ps  # should be smaller than 2 + ...
         for i in range(N):  # update evolution path pc
             self.pc[i] = (1 - par.cc) * self.pc[i] + ccn * hsig * y[i]
 
-        ### Adapt covariance matrix C
+        # Adapt covariance matrix C
         # minor adjustment for the variance loss from hsig
         c1a = par.c1 * (1 - (1 - hsig**2) * par.cc * (2 - par.cc))
         self.C.multiply_with(1 - c1a - par.cmu * sum(par.weights))  # C *= 1 - c1 - cmu * sum(w)
@@ -403,10 +379,9 @@ class CMAES(OOOptimizer):  # could also inherit from object
                 wk *= N * (self.sigma / self.C.mahalanobis_norm(minus(arx[k], xold))) ** 2
             self.C.addouter(minus(arx[k], xold), wk * par.cmu / self.sigma**2)  # C += wk * cmu * dx * dx^T
 
-        ### Adapt step-size sigma
+        # Adapt step-size sigma
         cn, sum_square_ps = par.cs / par.damps, sum(x**2 for x in self.ps)
         self.sigma *= exp(min(1, cn * (sum_square_ps / N - 1) / 2))
-        # self.sigma *= exp(min(1, cn * (sum_square_ps**0.5 / par.chiN - 1)))
 
     def stop(self):
         """return satisfied termination conditions in a dictionary,
@@ -414,236 +389,28 @@ class CMAES(OOOptimizer):  # could also inherit from object
         generally speaking like ``{'termination_reason':value, ...}``,
         for example ``{'tolfun':1e-12}``, or the empty `dict` ``{}``.
         """
-        res = {}
-        if self.counteval <= 0:
-            return res
-        if self.counteval >= self.maxfevals:
-            res["maxfevals"] = self.maxfevals
-        if self.ftarget is not None and len(self.fitvals) > 0 and self.fitvals[0] <= self.ftarget:
-            res["ftarget"] = self.ftarget
+        response = {}
+        if self.count_eval <= 0:
+            return response
+        if self.count_eval >= self.max_function_evaluations:
+            response["max_function_evaluations"] = self.max_function_evaluations
+        if self.fitness_target is not None and len(self.fit_vals) > 0 and self.fit_vals[0] <= self.fitness_target:
+            response["fitness_target"] = self.fitness_target
         if self.C.condition_number > 1e14:
-            res["condition"] = self.C.condition_number
-        if len(self.fitvals) > 1 and self.fitvals[-1] - self.fitvals[0] < 1e-12:
-            res["tolfun"] = 1e-12
+            response["condition"] = self.C.condition_number
+        if len(self.fit_vals) > 1 and self.fit_vals[-1] - self.fit_vals[0] < 1e-12:
+            response["tolfun"] = 1e-12
         if self.sigma * max(self.C.eigenvalues) ** 0.5 < 1e-11:
             # remark: max(D) >= max(diag(C))**0.5
-            res["tolx"] = 1e-11
-        return res
+            response["tolx"] = 1e-11
+        return response
 
     @property
     def result(self):
         """the `tuple` ``(xbest, f(xbest), evaluations_xbest, evaluations,
         iterations, xmean, stds)``
         """
-        return (self.best.x, self.best.f, self.best.evals, self.counteval, int(self.counteval / self.params.lam), self.xmean, [self.sigma * C_ii**0.5 for C_ii in self.C.diag])
-
-    def disp(self, verb_modulo=1):
-        """`print` some iteration info to `stdout`"""
-        if verb_modulo is None:
-            verb_modulo = 20
-        if not verb_modulo:
-            return
-        iteration = self.counteval / self.params.lam
-
-        if iteration == 1 or iteration % (10 * verb_modulo) < 1:
-            print("evals: ax-ratio max(std)   f-value")
-        if iteration <= 2 or iteration % verb_modulo < 1:
-            print(str(self.counteval).rjust(5) + ": " + " %6.1f %8.1e  " % (self.C.condition_number**0.5, self.sigma * max(self.C.diag) ** 0.5) + str(self.fitvals[0]))
-            _stdout.flush()
-
-
-# -----------------------------------------------
-class CMAESDataLogger(_BaseDataLogger):  # could also inherit from object
-    """data logger for class `CMAES`, that can record and plot data.
-
-    Examples
-    ========
-
-    The data may come from `fmin` or `CMAES` and the simulation may
-    still be running in a different Python shell.
-
-    Use the default logger from `CMAES`:
-
-    >>> try: import cma.purecma as pcma
-    ... except ImportError: import purecma as pcma
-    >>> es = pcma.CMAES(3 * [0.1], 1)
-    >>> isinstance(es.logger, pcma.CMAESDataLogger)  # type(es.logger)
-    True
-    >>> while not es.stop():
-    ...     X = es.ask()
-    ...     es.tell(X, [pcma.ff.elli(x) for x in X])
-    ...     es.logger.add(es)  # doctest: +SKIP
-    >>> es.logger.save()
-    >>> # es.logger.plot()  #
-
-    Load and plot previously generated data:
-
-    >>> logger = pcma.CMAESDataLogger().load()
-    >>> logger.filename == "_CMAESDataLogger_datadict.py"
-    True
-
-    >>> # logger.plot()
-
-    TODO: the recorded data are kept in memory and keep growing, which
-    may well lead to performance issues for (very?) long runs. Ideally,
-    it should be possible to dump data to a file and clear the memory and
-    also to downsample data to prevent plotting of long runs to take
-    forever. ``"], 'key': "`` or ``"]}"`` is the place where to
-    prepend/append new data in the file."""
-
-    plotted = 0
-    """plot count for all instances"""
-
-    def __init__(self, verb_modulo=1):
-        """`verb_modulo` controls whether and when logging takes place
-        for each call to the method `add`
-
-        """
-        # _BaseDataLogger.__init__(self)  # not necessary
-        self.filename = "_CMAESDataLogger_datadict.py"
-        self.optim = None
-        self.modulo = verb_modulo
-        self._data = {"eval": [], "iter": [], "stds": [], "D": [], "sigma": [], "fit": [], "xmean": [], "more_data": []}
-        self.counter = 0  # number of calls of add
-
-    def add(self, es=None, force=False, more_data=None):
-        """append some logging data from CMAES class instance `es`,
-        if ``number_of_times_called modulo verb_modulo`` equals zero
-        """
-        es = es or self.optim
-        if not isinstance(es, CMAES):
-            raise RuntimeWarning("logged object must be a CMAES instance," " was %s" % type(es))
-        dat = self._data  # a convenient alias
-        self.counter += 1
-        if force and self.counter == 1:
-            self.counter = 0
-        if self.modulo and (len(dat["eval"]) == 0 or es.counteval != dat["eval"][-1]) and (self.counter < 4 or force or int(self.counter) % self.modulo == 0):
-            dat["eval"].append(es.counteval)
-            dat["iter"].append(es.counteval / es.params.lam)
-            dat["stds"].append([es.C[i][i] ** 0.5 for i in range(len(es.C))])
-            dat["D"].append(sorted(ev**0.5 for ev in es.C.eigenvalues))
-            dat["sigma"].append(es.sigma)
-            dat["fit"].append(es.fitvals[0] if hasattr(es, "fitvals") and es.fitvals else None)
-            dat["xmean"].append([x for x in es.xmean])
-            if more_data is not None:
-                dat["more_data"].append(more_data)
-        return self
-
-    def plot(self, fig_number=322):
-        """plot the stored data in figure `fig_number`.
-
-        Dependencies: `matlabplotlib.pylab`
-        """
-        from matplotlib import pylab
-        from matplotlib.pylab import gcf, gca, figure, plot, xlabel, grid, semilogy, text, draw, show, ion, subplot as _subplot, tight_layout, rcParamsDefault, xlim, ylim
-
-        def title_(*args, **kwargs):
-            kwargs.setdefault("size", rcParamsDefault["axes.labelsize"])
-            pylab.title(*args, **kwargs)
-
-        def subtitle(*args, **kwargs):
-            kwargs.setdefault("horizontalalignment", "center")
-            text(0.5 * (xlim()[1] - xlim()[0]), 0.9 * ylim()[1], *args, **kwargs)
-
-        def legend_(*args, **kwargs):
-            kwargs.setdefault("framealpha", 0.3)
-            kwargs.setdefault("fancybox", True)
-            kwargs.setdefault("fontsize", rcParamsDefault["font.size"] - 2)
-            pylab.legend(*args, **kwargs)
-
-        def subplot(*args, **kwargs):
-            with _warnings.catch_warnings():
-                _warnings.simplefilter("ignore")
-                _subplot(*args, **kwargs)  # catch unjustified deprecation warning because subplot and add_subplot are not separate
-
-        if isinstance(fig_number, int):
-            figure(fig_number)
-
-        dat = self._data  # dictionary with entries as given in __init__
-        if not dat or not dat["eval"] or len(dat["eval"]) <= 2:
-            return
-        try:  # a hack to get the presumable population size lambda
-            strpopsize = " (evaluations / %s)" % str(dat["eval"][-2] - dat["eval"][-3])
-        except IndexError:
-            strpopsize = ""
-
-        # plot fit, Delta fit, sigma
-        subplot(221)
-        gca().clear()
-        if dat["fit"][0] is None:  # plot is fine with None, but comput-
-            dat["fit"][0] = dat["fit"][1]  # tations need numbers
-            # should be reverted later, but let's be lazy
-        assert dat["fit"].count(None) == 0
-        fmin = min(dat["fit"])
-        imin = dat["fit"].index(fmin)
-        dat["fit"][imin] = max(dat["fit"]) + 1
-        fmin2 = min(dat["fit"])
-        dat["fit"][imin] = fmin
-        semilogy(dat["iter"], [f - fmin if f - fmin > 1e-19 else None for f in dat["fit"]], "c", linewidth=1, label="f-min(f)")
-        semilogy(dat["iter"], [max((fmin2 - fmin, 1e-19)) if f - fmin <= 1e-19 else None for f in dat["fit"]], "C1*")
-
-        semilogy(dat["iter"], [abs(f) for f in dat["fit"]], "b", label="abs(f-value)")
-        semilogy(dat["iter"], dat["sigma"], "g", label="sigma")
-        semilogy(dat["iter"][imin], abs(fmin), "r*", label="abs(min(f))")
-        if dat["more_data"]:
-            gca().twinx()
-            plot(dat["iter"], dat["more_data"])
-        grid(True)
-        legend_(*[[v[i] for i in [1, 0, 2, 3]] for v in gca().get_legend_handles_labels()])  # just a reordering
-
-        # plot xmean
-        subplot(222)
-        gca().clear()
-        plot(dat["iter"], dat["xmean"])
-        for i in range(len(dat["xmean"][-1])):
-            text(dat["iter"][0], dat["xmean"][0][i], str(i))
-            text(dat["iter"][-1], dat["xmean"][-1][i], str(i))
-        subtitle("mean solution")
-        grid(True)
-
-        # plot squareroot of eigenvalues
-        if dat["D"][-1][0] != dat["D"][-1][-1]:
-            subplot(223)
-            gca().clear()
-            semilogy(dat["iter"], dat["D"], "m")
-            xlabel("iterations" + strpopsize)
-            title_("Axis lengths")
-            grid(True)
-
-        # plot stds
-        subplot(224)
-        # if len(gcf().axes) > 1:
-        #     sca(pylab.gcf().axes[1])
-        # else:
-        #     twinx()
-        gca().clear()
-        semilogy(dat["iter"], dat["stds"])
-        for i in range(len(dat["stds"][-1])):
-            text(dat["iter"][-1], dat["stds"][-1][i], str(i))
-        title_("Coordinate-wise STDs w/o sigma")
-        grid(True)
-        xlabel("iterations" + strpopsize)
-        _stdout.flush()
-        tight_layout()  # avoid superfluous padding
-        # draw(), show()  # canvas.draw seem to do the job better
-        ion()  # may prevent that everything stops until figure is closed?
-        # todo: if in the same cell, the subplots are small until the cell is finished
-        gcf().canvas.draw()
-        CMAESDataLogger.plotted += 1
-
-    def save(self, name=None):
-        """save data to file `name` or ``self.filename``"""
-        with open(name or self.filename, "w") as f:
-            f.write(repr(self._data))
-
-    def load(self, name=None):
-        """load data from file `name` or ``self.filename``"""
-        from ast import literal_eval
-
-        with open(name or self.filename, "r") as f:
-            self._data = literal_eval(f.read())
-        return self
-
+        return (self.best.x, self.best.f, self.best.evals, self.count_eval, int(self.count_eval / self.params.lam), self.xmean, [self.sigma * C_ii**0.5 for C_ii in self.C.diag])
 
 # _____________________________________________________________________
 # _________________ Fitness (Objective) Functions _____________________
@@ -828,39 +595,6 @@ def argsort(a):
     ``a[argsort(a)[i]] == sorted(a)[i]``
     """
     return sorted(range(len(a)), key=a.__getitem__)  # a.__getitem__(i) is a[i]
-
-
-def safe_str(s, known_words=None):
-    """return ``s`` as `str` safe to `eval` or raise an exception.
-
-    Strings in the `dict` `known_words` are replaced by their values
-    surrounded with a space, which the caller considers safe to evaluate
-    with `eval` afterwards.
-
-    Known issues:
-
-    >>> try: from cma.purecma import safe_str
-    ... except ImportError: from purecma import safe_str
-    >>> safe_str('int(p)', {'int': 'int', 'p': 3.1})  # fine
-    ' int ( 3.1 )'
-    >>> safe_str('int(n)', {'int': 'int', 'n': 3.1})  # unexpected
-    ' i 3.1 t ( 3.1 )'
-
-    """
-    safe_chars = " 0123456789.,+-*()[]e<>="
-    if s != str(s):
-        return str(s)
-    if not known_words:
-        known_words = {}
-    stest = s[:]  # test this string
-    sret = s[:]  # return this string
-    for word in sorted(known_words.keys(), key=len, reverse=True):
-        stest = stest.replace(word, "  ")
-        sret = sret.replace(word, " %s " % known_words[word])
-    for c in stest:
-        if c not in safe_chars:
-            raise ValueError('"%s" is not a safe string' " (known words are %s)" % (s, str(known_words)))
-    return sret
 
 
 # ____________________________________________________________
@@ -1216,8 +950,7 @@ def test():
     ... except ImportError: import purecma as pcma
     >>> import random
     >>> random.seed(8)
-    >>> xmin, es = pcma.fmin(pcma.ff.rosenbrock, 4 * [0.5], 0.5,
-    ...                      verb_disp=0, verb_log=1)
+    >>> xmin, es = pcma.find_minimizing_values(pcma.ff.rosenbrock, 4 * [0.5], 0.5)
     >>> print(es.counteval)
     1712
     >>> print(es.best.evals)
@@ -1225,9 +958,7 @@ def test():
     >>> assert es.best.f < 1e-12
     >>> random.seed(5)
     >>> es = pcma.CMAES(4 * [0.5], 0.5)
-    >>> es.params = pcma.CMAESParameters(es.params.dimension,
-    ...                                  es.params.lam,
-    ...                                  pcma.RecombinationWeights)
+    >>> es.params = pcma.CmaesParameters(es.params.dimension, es.params.lam,)
     >>> while not es.stop():
     ...     X = es.ask()
     ...     es.tell(X, [pcma.ff.rosenbrock(x) for x in X])
@@ -1239,11 +970,9 @@ def test():
 
     >>> random.seed(4)
     >>> es = pcma.CMAES(3 * [1], 1)
-    >>> es.params = pcma.CMAESParameters(es.params.dimension, 300,
-    ...                                  pcma.RecombinationWeights)
-    >>> es.logger = pcma.CMAESDataLogger()
+    >>> es.params = pcma.CmaesParameters(es.params.dimension, 300)
     >>> try:
-    ...    es = es.optimize(pcma.ff.elli, verb_disp=0)
+    ...    es = es.optimize(pcma.ff.elli)
     ... except AttributeError:  # OOOptimizer.optimize is not available
     ...     while not es.stop():
     ...         X = es.ask()
@@ -1266,4 +995,4 @@ if __name__ == "__main__":
 
     test()
 
-    # fmin(ff.rosenbrock, 10 * [0.5], 0.5)
+    # find_minimizing_values(ff.rosenbrock, 10 * [0.5], 0.5)
