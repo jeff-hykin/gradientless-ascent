@@ -14,6 +14,7 @@ lambda -> weights -> mueff -> c1, cmu -> negative weights
 from __future__ import division, print_function
 import math
 
+
 class RecombinationWeights(list):
     """a list of decreasing (recombination) weight values.
 
@@ -112,12 +113,12 @@ class RecombinationWeights(list):
     ...                 for expo in [1, 0.9, 0.8, 0.7, 0.6, 0.5]]:
     ...    assert all([len(w(i)) == i for i in range(3, 8)])
     ...    print(7 * "%.2f " % tuple([expo, w.mueff] + w))
-    1.00 1.65 0.73 0.27 0.00 -0.36 -0.64 
-    0.90 1.70 0.71 0.29 0.00 -0.37 -0.63 
-    0.80 1.75 0.69 0.31 0.00 -0.39 -0.61 
-    0.70 1.80 0.67 0.33 0.00 -0.40 -0.60 
-    0.60 1.84 0.65 0.35 0.00 -0.41 -0.59 
-    0.50 1.89 0.62 0.38 0.00 -0.43 -0.57 
+    1.00 1.65 0.73 0.27 0.00 -0.36 -0.64
+    0.90 1.70 0.71 0.29 0.00 -0.37 -0.63
+    0.80 1.75 0.69 0.31 0.00 -0.39 -0.61
+    0.70 1.80 0.67 0.33 0.00 -0.40 -0.60
+    0.60 1.84 0.65 0.35 0.00 -0.41 -0.59
+    0.50 1.89 0.62 0.38 0.00 -0.43 -0.57
 
     >>> for lam in [8, 8**2, 8**3, 8**4]:
     ...     if lam == 8:
@@ -129,21 +130,21 @@ class RecombinationWeights(list):
     ...         print('%4d ' % lam + 10 * "%.2f " % tuple([expo, w.mueff / w1.mueff] + [w[i] / w1[i] for i in range(8)]))
      lam expo mueff        w[i] / w[i](1)
               /mu(1) 1   2    3    4    5    6    7    8
-       8 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 
-       8 0.80 1.11 0.90 1.02 1.17 1.50 1.30 1.07 0.98 0.93 
-       8 0.60 1.24 0.80 1.02 1.35 2.21 1.68 1.13 0.95 0.85 
-      64 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 
-      64 0.80 1.17 0.82 0.86 0.88 0.91 0.93 0.95 0.97 0.98 
-      64 0.60 1.36 0.65 0.72 0.76 0.80 0.84 0.87 0.91 0.94 
-     512 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 
-     512 0.80 1.20 0.76 0.78 0.79 0.80 0.81 0.82 0.83 0.83 
-     512 0.60 1.42 0.56 0.59 0.61 0.63 0.64 0.65 0.67 0.68 
-    4096 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 
-    4096 0.80 1.21 0.71 0.73 0.74 0.74 0.75 0.75 0.76 0.76 
-    4096 0.60 1.44 0.50 0.52 0.53 0.54 0.55 0.55 0.56 0.56 
+       8 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00
+       8 0.80 1.11 0.90 1.02 1.17 1.50 1.30 1.07 0.98 0.93
+       8 0.60 1.24 0.80 1.02 1.35 2.21 1.68 1.13 0.95 0.85
+      64 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00
+      64 0.80 1.17 0.82 0.86 0.88 0.91 0.93 0.95 0.97 0.98
+      64 0.60 1.36 0.65 0.72 0.76 0.80 0.84 0.87 0.91 0.94
+     512 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00
+     512 0.80 1.20 0.76 0.78 0.79 0.80 0.81 0.82 0.83 0.83
+     512 0.60 1.42 0.56 0.59 0.61 0.63 0.64 0.65 0.67 0.68
+    4096 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00
+    4096 0.80 1.21 0.71 0.73 0.74 0.74 0.75 0.75 0.76 0.76
+    4096 0.60 1.44 0.50 0.52 0.53 0.54 0.55 0.55 0.56 0.56
 
-    Reference: Hansen 2016, arXiv:1604.00772.
-"""
+    Reference: Hansen 2016, arXiv:1604.00772."""
+
     def __init__(self, len_, exponent=1):
         """return recombination weights `list`, post condition is
         ``sum(self) == 0 and sum(self.positive_weights) == 1``.
@@ -170,15 +171,16 @@ class RecombinationWeights(list):
             try:  # iterator without len
                 len_ = len(list(weights))
             except TypeError:  # create from scratch
+
                 def signed_power(x, expo):
-                    if expo == 1: return x
+                    if expo == 1:
+                        return x
                     s = (x != 0) * (-1 if x < 0 else 1)
-                    return s * math.fabs(x)**expo
-                weights = [signed_power(math.log((len_ + 1) / 2.) - math.log(i), self.exponent)
-                           for i in range(1, len_ + 1)]  # raw shape
+                    return s * math.fabs(x) ** expo
+
+                weights = [signed_power(math.log((len_ + 1) / 2.0) - math.log(i), self.exponent) for i in range(1, len_ + 1)]  # raw shape
         if len_ < 2:
-            raise ValueError("number of weights must be >=2, was %d"
-                             % (len_))
+            raise ValueError("number of weights must be >=2, was %d" % (len_))
         self.debug = False
 
         # self[:] = weights  # should do, or
@@ -186,7 +188,7 @@ class RecombinationWeights(list):
         list.__init__(self, weights)
 
         self.set_attributes_from_weights(do_asserts=False)
-        sum_neg = sum(self[self.mu:])
+        sum_neg = sum(self[self.mu :])
         if sum_neg != 0:
             for i in range(self.mu, len(self)):
                 self[i] /= -sum_neg
@@ -198,9 +200,9 @@ class RecombinationWeights(list):
         if lambda_ <= self.mu:
             return self[:lambda_]
         if lambda_ < self.lambda_:
-            return self[:self.mu] + self[self.mu - lambda_:]
+            return self[: self.mu] + self[self.mu - lambda_ :]
         if lambda_ > self.lambda_:
-            return self[:self.mu] + (lambda_ - self.lambda_) * [0] + self[self.mu:]
+            return self[: self.mu] + (lambda_ - self.lambda_) * [0] + self[self.mu :]
         return self
 
     def set_attributes_from_weights(self, weights=None, do_asserts=True):
@@ -218,26 +220,21 @@ class RecombinationWeights(list):
         """
         if weights is not None:
             if not weights[0] > 0:
-                raise ValueError(
-                    "the first weight must be >0 but was %f" % weights[0])
+                raise ValueError("the first weight must be >0 but was %f" % weights[0])
             if weights[-1] > 0:
-                raise ValueError(
-                    "the last weight must be <=0 but was %f" %
-                    weights[-1])
+                raise ValueError("the last weight must be <=0 but was %f" % weights[-1])
             self[:] = weights
         weights = self
-        assert all(weights[i] >= weights[i+1]
-                        for i in range(len(weights) - 1))
+        assert all(weights[i] >= weights[i + 1] for i in range(len(weights) - 1))
         self.mu = sum(w > 0 for w in weights)
-        spos = sum(weights[:self.mu])
+        spos = sum(weights[: self.mu])
         assert spos > 0
         for i in range(len(self)):
             self[i] /= spos
         # variance-effectiveness of sum^mu w_i x_i
-        self.mueff = 1**2 / sum(w**2 for w in
-                                   weights[:self.mu])
-        sneg = sum(weights[self.mu:])
-        assert (sneg - sum(w for w in weights if w < 0))**2 < 1e-11
+        self.mueff = 1**2 / sum(w**2 for w in weights[: self.mu])
+        sneg = sum(weights[self.mu :])
+        assert (sneg - sum(w for w in weights if w < 0)) ** 2 < 1e-11
         not do_asserts or self.do_asserts()
         return self
 
@@ -273,23 +270,22 @@ class RecombinationWeights(list):
 
         """
         if dimension <= 0:
-            raise ValueError("dimension must be larger than zero, was " +
-                             str(dimension))
+            raise ValueError("dimension must be larger than zero, was " + str(dimension))
         self._c1 = c1  # for the record
         self._cmu = cmu
 
         if self[-1] < 0:
             if cmu > 0:
                 if c1 > 10 * cmu:
-                    print("""WARNING: c1/cmu = %f/%f seems to assume a
+                    print(
+                        """WARNING: c1/cmu = %f/%f seems to assume a
                     too large value for negative weights setting"""
-                          % (c1, cmu))
+                        % (c1, cmu)
+                    )
                 self._negative_weights_set_sum(1 + c1 / cmu)
                 if pos_def:
-                    self._negative_weights_limit_sum((1 - c1 - cmu) / cmu
-                                                     / dimension)
-            self._negative_weights_limit_sum(1 + 2 * self.mueffminus
-                                             / (self.mueff + 2))
+                    self._negative_weights_limit_sum((1 - c1 - cmu) / cmu / dimension)
+            self._negative_weights_limit_sum(1 + 2 * self.mueffminus / (self.mueff + 2))
         self.do_asserts()
         self.finalized = True
 
@@ -321,29 +317,26 @@ class RecombinationWeights(list):
             istart = max((self.mu, int(self.lambda_ / 2)))
             for i in range(istart, self.lambda_):
                 weights[i] = -value / (self.lambda_ - istart)
-        factor = abs(value / sum(weights[self.mu:]))
+        factor = abs(value / sum(weights[self.mu :]))
         for i in range(self.mu, self.lambda_):
             weights[i] *= factor
         assert 1 - value - 1e-5 < sum(weights) < 1 - value + 1e-5
         if self.debug:
-            print("sum w = %.2f, sum w^- = %.2f" %
-                  (sum(weights), -sum(weights[self.mu:])))
+            print("sum w = %.2f, sum w^- = %.2f" % (sum(weights), -sum(weights[self.mu :])))
 
     def _negative_weights_limit_sum(self, value):
-        """lower bound the sum of negative weights to ``-abs(value)``.
-        """
+        """lower bound the sum of negative weights to ``-abs(value)``."""
         weights = self  # simpler to change to data attribute and nicer to read
         value = abs(value)  # simplify code, prevent erroneous assertion error
-        if sum(weights[self.mu:]) >= -value:  # nothing to limit
+        if sum(weights[self.mu :]) >= -value:  # nothing to limit
             return  # needed when sum is zero
         assert weights[-1] < 0 and weights[self.mu] <= 0
-        factor = abs(value / sum(weights[self.mu:]))
+        factor = abs(value / sum(weights[self.mu :]))
         if factor < 1:
             for i in range(self.mu, self.lambda_):
                 weights[i] *= factor
             if self.debug:
-                print("sum w = %.2f (with correction %.2f)" %
-                      (sum(weights), value))
+                print("sum w = %.2f (with correction %.2f)" % (sum(weights), value))
         assert sum(weights) + 1e-5 >= 1 - value
 
     def do_asserts(self):
@@ -361,30 +354,25 @@ class RecombinationWeights(list):
         assert 1 >= weights[0] > 0
         assert weights[-1] <= 0
         assert len(weights) == self.lambda_
-        assert all(weights[i] >= weights[i+1]
-                        for i in range(len(weights) - 1))  # monotony
+        assert all(weights[i] >= weights[i + 1] for i in range(len(weights) - 1))  # monotony
         assert self.mu > 0  # needed for next assert
-        assert weights[self.mu-1] > 0 >= weights[self.mu]
-        assert 0.999 < sum(w for w in weights[:self.mu]) < 1.001
-        assert (self.mueff / 1.001 <
-                sum(weights[:self.mu])**2 / sum(w**2 for w in weights[:self.mu]) <
-                1.001 * self.mueff)
-        assert (self.mueffminus == 0 == sum(weights[self.mu:]) or
-                self.mueffminus / 1.001 <
-                sum(weights[self.mu:])**2 / sum(w**2 for w in weights[self.mu:]) <
-                1.001 * self.mueffminus)
+        assert weights[self.mu - 1] > 0 >= weights[self.mu]
+        assert 0.999 < sum(w for w in weights[: self.mu]) < 1.001
+        assert self.mueff / 1.001 < sum(weights[: self.mu]) ** 2 / sum(w**2 for w in weights[: self.mu]) < 1.001 * self.mueff
+        assert self.mueffminus == 0 == sum(weights[self.mu :]) or self.mueffminus / 1.001 < sum(weights[self.mu :]) ** 2 / sum(w**2 for w in weights[self.mu :]) < 1.001 * self.mueffminus
 
     @property
     def lambda_(self):
         """alias for ``len(self)``"""
         return len(self)
+
     @property
     def mueffminus(self):
         weights = self
-        sneg = sum(weights[self.mu:])
-        assert (sneg - sum(w for w in weights if w < 0))**2 < 1e-11
-        return (0 if sneg == 0 else
-                sneg**2 / sum(w**2 for w in weights[self.mu:]))
+        sneg = sum(weights[self.mu :])
+        assert (sneg - sum(w for w in weights if w < 0)) ** 2 < 1e-11
+        return 0 if sneg == 0 else sneg**2 / sum(w**2 for w in weights[self.mu :])
+
     @property
     def positive_weights(self):
         """all (strictly) positive weights as ``np.array``.
@@ -393,11 +381,14 @@ class RecombinationWeights(list):
         """
         try:
             from numpy import asarray
-            return asarray(self[:self.mu])
+
+            return asarray(self[: self.mu])
         except:
-            return self[:self.mu]
+            return self[: self.mu]
+
     @property
     def asarray(self):
         """return weights as numpy array"""
         from numpy import asarray
+
         return asarray(self)

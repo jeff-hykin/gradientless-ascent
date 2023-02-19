@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-'''Interface wrappers for the `cma` module.
+"""Interface wrappers for the `cma` module.
 
 The `SkoptCMAoptimizer` wrapper interfaces an optimizer aligned with
 `skopt.optimizer`.
-'''
+"""
 # built-in
 import pdb
 import copy
@@ -16,15 +16,24 @@ import warnings
 import numpy as np
 import cma  # caveat: does not import necessarily the code of this root folder?
 
-try: import skopt
-except ImportError: warnings.warn('install `skopt` ("pip install scikit-optimize") '
-                                  'to use `SkoptCMAoptimizer`')
+try:
+    import skopt
+except ImportError:
+    warnings.warn('install `skopt` ("pip install scikit-optimize") ' "to use `SkoptCMAoptimizer`")
 else:
+
     def SkoptCMAoptimizer(
-        func, dimensions, n_calls, verbose=False, callback=(), x0=None, n_jobs=1,
-        sigma0=.5, normalize=True,
+        func,
+        dimensions,
+        n_calls,
+        verbose=False,
+        callback=(),
+        x0=None,
+        n_jobs=1,
+        sigma0=0.5,
+        normalize=True,
     ):
-        '''
+        """
         Optmizer based on CMA-ES algorithm.
         This is essentially a wrapper fuction for the cma library function
         to align the interface with skopt library.
@@ -59,22 +68,25 @@ else:
                                                 2 * [(-1.,1.)], 55)
             res['cma_es'].logger.plot()
 
-        '''
+        """
         specs = {
-            'args': copy.copy(inspect.currentframe().f_locals),
-            'function': inspect.currentframe().f_code.co_name,
+            "args": copy.copy(inspect.currentframe().f_locals),
+            "function": inspect.currentframe().f_code.co_name,
         }
 
-        if normalize: dimensions = list(map(lambda x: skopt.space.check_dimension(x, 'normalize'), dimensions))
+        if normalize:
+            dimensions = list(map(lambda x: skopt.space.check_dimension(x, "normalize"), dimensions))
         space = skopt.space.Space(dimensions)
-        if x0 is None: x0 = space.transform(space.rvs())[0]
-        else: x0 = space.transform([x0])[0]
+        if x0 is None:
+            x0 = space.transform(space.rvs())[0]
+        else:
+            x0 = space.transform([x0])[0]
 
         tempdir = tempfile.mkdtemp()
         xi, yi = [], []
         options = {
-            'bounds': np.array(space.transformed_bounds).transpose().tolist(),
-            'verb_filenameprefix': tempdir,
+            "bounds": np.array(space.transformed_bounds).transpose().tolist(),
+            "verb_filenameprefix": tempdir,
         }
 
         def delete_tempdir(self, *args, **kargs):
@@ -83,13 +95,14 @@ else:
 
         model = cma.CMAEvolutionStrategy(x0, sigma0, options)
         model.logger.__del__ = delete_tempdir
-        switch = { -1: None,  # use number of available CPUs
-                    1: 0,     # avoid using multiprocessor for just one CPU
-                 }
-        with cma.optimization_tools.EvalParallel2(func,
-                number_of_processes=switch.get(n_jobs, n_jobs)) as parallel_func:
+        switch = {
+            -1: None,  # use number of available CPUs
+            1: 0,  # avoid using multiprocessor for just one CPU
+        }
+        with cma.optimization_tools.EvalParallel2(func, number_of_processes=switch.get(n_jobs, n_jobs)) as parallel_func:
             for _i in range(n_calls):
-                if model.stop(): break
+                if model.stop():
+                    break
                 new_xi = model.ask()
                 new_xi_denorm = space.inverse_transform(np.array(new_xi))
                 # new_yi = [func(x) for x in new_xi_denorm]
@@ -97,12 +110,14 @@ else:
 
                 model.tell(new_xi, new_yi)
                 model.logger.add()
-                if verbose: model.disp()
+                if verbose:
+                    model.disp()
 
                 xi += new_xi_denorm
                 yi += new_yi
                 results = skopt.utils.create_result(xi, yi)
-                for f in callback: f(results)
+                for f in callback:
+                    f(results)
 
         results = skopt.utils.create_result(xi, yi, space)
         model.logger.load()

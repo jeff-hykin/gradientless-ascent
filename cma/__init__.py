@@ -109,11 +109,14 @@ From a python shell::
 # __docformat__ = "reStructuredText"  # this hides some comments entirely?
 
 from __future__ import absolute_import  # now local imports must use .
+
 # big difference between PY2 and PY3:
 from __future__ import division
 from __future__ import print_function
+
 # only necessary for python 2.5 (not supported) and not in heavy use
 from __future__ import with_statement
+
 ___author__ = "Nikolaus Hansen and Petr Baudis and Youhei Akimoto"
 __license__ = "BSD 3-clause"
 
@@ -121,18 +124,27 @@ import warnings as _warnings
 
 # __package__ = 'cma'
 from . import purecma
+
 try:
     import numpy
+
     del numpy
 except ImportError:
-    _warnings.warn('Only `cma.purecma` has been imported. Install `numpy` ("pip'
-          ' install numpy") if you want to import the entire `cma`'
-          ' package.')
+    _warnings.warn('Only `cma.purecma` has been imported. Install `numpy` ("pip' ' install numpy") if you want to import the entire `cma`' " package.")
 else:
-    from . import (constraints_handler, evolution_strategy, fitness_functions,
-                    fitness_transformations, interfaces, optimization_tools,
-                    sampler, sigma_adaptation, transformations, utilities,
-                    )
+    from . import (
+        constraints_handler,
+        evolution_strategy,
+        fitness_functions,
+        fitness_transformations,
+        interfaces,
+        optimization_tools,
+        sampler,
+        sigma_adaptation,
+        transformations,
+        utilities,
+    )
+
     # from . import test  # gives a warning with python -m cma.test (since Python 3.5.3?)
     test = 'type "import cma.test" to access the `test` module of `cma`'
     from . import s
@@ -140,13 +152,14 @@ else:
     from .fitness_transformations import GlueArguments, ScaleCoordinates
     from .evolution_strategy import fmin, fmin2, fmin_con, fmin_con2, fmin_lq_surr, fmin_lq_surr2
     from .evolution_strategy import CMAEvolutionStrategy, CMAOptions
+
     CMA = CMAEvolutionStrategy  # shortcut for typing without completion
     from .logger import disp, plot, CMADataLogger
     from .optimization_tools import NoiseHandler
     from .constraints_handler import BoundPenalty, BoundTransform, ConstrainedFitnessAL
     from .evolution_strategy import cma_default_options_
 
-del division, print_function, absolute_import, with_statement  #, unicode_literals
+del division, print_function, absolute_import, with_statement  # , unicode_literals
 
 # fcts = ff  # historical reasons only, replace cma.fcts with cma.ff first
 

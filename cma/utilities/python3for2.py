@@ -9,7 +9,7 @@ import collections as _collections
 range = range  # to allow (trivial) explicit import also in Python 3
 input = input
 
-if sys.version[0] == '2':  # in python 2
+if sys.version[0] == "2":  # in python 2
     range = xrange  # clean way: from builtins import range
     input = raw_input  # in py2, input(x) == eval(raw_input(x))
     abc = _collections  # never used
@@ -19,15 +19,8 @@ if sys.version[0] == '2':  # in python 2
     if 11 < 3:  # newint does produce an error on some installations
         try:
             from future.builtins.disabled import *  # rather not necessary if tested also in Python 3
-            from future.builtins import (
-                     bytes, dict, int, list, object, range,
-                     str, ascii, chr, hex, input, next, oct, open,
-                     pow, round, super, filter, map, zip
-                    )
-            from builtins import (  # not list and object, by default builtins don't exist in Python 2
-                    ascii, bytes, chr, dict, filter, hex, input,
-                    int, map, next, oct, open, pow, range, round,
-                    str, super, zip)
+            from future.builtins import bytes, dict, int, list, object, range, str, ascii, chr, hex, input, next, oct, open, pow, round, super, filter, map, zip
+            from builtins import ascii, bytes, chr, dict, filter, hex, input, int, map, next, oct, open, pow, range, round, str, super, zip  # not list and object, by default builtins don't exist in Python 2
         except ImportError:
             pass
 else:

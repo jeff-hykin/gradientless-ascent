@@ -30,42 +30,50 @@ argument, all files from attribute `files_for_doc_test` are tested.
 #   or python ~/Downloads/pychecker-0.8.19/pychecker/checker.py cma.py
 #   python -3 -m cma  2> out2to3warnings.txt # produces no warnings from here
 
-from __future__ import (absolute_import, division, print_function,
-                        )  # unicode_literals)
+from __future__ import (
+    absolute_import,
+    division,
+    print_function,
+)  # unicode_literals)
 import os, sys
 import doctest
-del absolute_import, division, print_function  #, unicode_literals
 
-files_for_doctest = ['bbobbenchmarks.py',
-                     'constraints_handler.py',
-                     'evolution_strategy.py',
-                     'fitness_functions.py',
-                     'fitness_models.py',
-                     'fitness_transformations.py',
-                     'interfaces.py',
-                     'logger.py',
-                     'optimization_tools.py',
-                     'purecma.py',
-                     'recombination_weights.py',
-                     'restricted_gaussian_sampler.py',
-                     'sampler.py',
-                     'sigma_adaptation.py',
-                     'test.py',
-                     'transformations.py',
-                     os.path.join('utilities', 'math.py'),
-                     os.path.join('utilities', 'utils.py'),
-    ]
-_files_written = ['_saved-cma-object.pkl',
-                  'outcmaesaxlen.dat',
-                  'outcmaesaxlencorr.dat',
-                  'outcmaesfit.dat',
-                  'outcmaesstddev.dat',
-                  'outcmaesxmean.dat',
-                  'outcmaesxrecentbest.dat',
-    ]
+del absolute_import, division, print_function  # , unicode_literals
+
+files_for_doctest = [
+    "bbobbenchmarks.py",
+    "constraints_handler.py",
+    "evolution_strategy.py",
+    "fitness_functions.py",
+    "fitness_models.py",
+    "fitness_transformations.py",
+    "interfaces.py",
+    "logger.py",
+    "optimization_tools.py",
+    "purecma.py",
+    "recombination_weights.py",
+    "restricted_gaussian_sampler.py",
+    "sampler.py",
+    "sigma_adaptation.py",
+    "test.py",
+    "transformations.py",
+    os.path.join("utilities", "math.py"),
+    os.path.join("utilities", "utils.py"),
+]
+_files_written = [
+    "_saved-cma-object.pkl",
+    "outcmaesaxlen.dat",
+    "outcmaesaxlencorr.dat",
+    "outcmaesfit.dat",
+    "outcmaesstddev.dat",
+    "outcmaesxmean.dat",
+    "outcmaesxrecentbest.dat",
+]
 """files written by the doc tests and hence, in case, to be deleted"""
 
 PY2 = sys.version_info[0] == 2
+
+
 def _clean_up(folder, start_matches, protected):
     """(permanently) remove entries in ``folder`` which begin with any of
     ``start_matches``, where ``""`` matches any string, and which are not
@@ -79,12 +87,14 @@ def _clean_up(folder, start_matches, protected):
     if not protected and "" in start_matches:
         raise ValueError(
             '''_clean_up(folder, [..., "", ...], []) is not permitted as it
-               resembles "rm *"''')
+               resembles "rm *"'''
+        )
     protected = protected + ["/"]
     for file_ in os.listdir(folder):
-        if any(file_.startswith(s) for s in start_matches) \
-                and not any(file_.startswith(p) for p in protected):
+        if any(file_.startswith(s) for s in start_matches) and not any(file_.startswith(p) for p in protected):
             os.remove(os.path.join(folder, file_))
+
+
 def is_str(var):  # copy from utils to avoid relative import
     """`bytes` (in Python 3) also fit the bill"""
     if PY2:
@@ -92,6 +102,7 @@ def is_str(var):  # copy from utils to avoid relative import
     else:
         types_ = (str, bytes)
     return any(isinstance(var, type_) for type_ in types_)
+
 
 def various_doctests():
     """various doc tests.
@@ -322,6 +333,7 @@ def various_doctests():
 
     """
 
+
 def doctest_files(file_list=files_for_doctest, **kwargs):
     """doctest all (listed) files of the `cma` package.
 
@@ -333,40 +345,37 @@ def doctest_files(file_list=files_for_doctest, **kwargs):
     # print(__package__)
     if not isinstance(file_list, list) and is_str(file_list):
         file_list = [file_list]
-    verbosity_here = kwargs.get('verbose', 0)
+    verbosity_here = kwargs.get("verbose", 0)
     if verbosity_here < 0:
-        kwargs['verbose'] = 0
+        kwargs["verbose"] = 0
     failures = 0
     for file_ in file_list:
         file_ = file_.strip().strip(os.path.sep)
-        if file_.startswith('cma' + os.path.sep):
+        if file_.startswith("cma" + os.path.sep):
             file_ = file_[4:]
         if verbosity_here >= 0:
-            print('doctesting %s ...' % file_,
-                  ' ' * (max(len(_file) for _file in file_list) -
-                         len(file_)),
-                  end="")  # does not work in Python 2.5
+            print("doctesting %s ..." % file_, " " * (max(len(_file) for _file in file_list) - len(file_)), end="")  # does not work in Python 2.5
             sys.stdout.flush()
-        protected_files = os.listdir('.')
-        report = doctest.testfile(file_,
-                                  package=__package__,  # 'cma', # sys.modules[__name__],
-                                  **kwargs)
-        _clean_up('.', _files_written, protected_files)
+        protected_files = os.listdir(".")
+        report = doctest.testfile(file_, package=__package__, **kwargs)  # 'cma', # sys.modules[__name__],
+        _clean_up(".", _files_written, protected_files)
         failures += report[0]
         if verbosity_here >= 0:
             print(report)
     return failures
 
+
 def get_version():
     try:
-        with open(__file__[:-7] + '__init__.py', 'r') as f:
+        with open(__file__[:-7] + "__init__.py", "r") as f:
             for line in f.readlines():
-                if line.startswith('__version__'):
+                if line.startswith("__version__"):
                     return line[15:].split()[0]
     except:
         return ""
         print(__file__)
         raise
+
 
 def main(*args, **kwargs):
     """test the `cma` package.
@@ -381,18 +390,18 @@ def main(*args, **kwargs):
     :See also: ``python -c "import cma.test; help(cma.test)"``
     """
     if len(args) > 0:
-        if args[0].startswith(('-h', '--h')):
+        if args[0].startswith(("-h", "--h")):
             print(__doc__)
             exit(0)
-        elif args[0].startswith('list'):
+        elif args[0].startswith("list"):
             for file_ in files_for_doctest:
                 print(file_)
             exit(0)
     else:
         v = get_version()
-        print("doctesting `cma` package%s by calling `doctest_files`:"
-              % ((" (v%s)" % v) if v else ""))
+        print("doctesting `cma` package%s by calling `doctest_files`:" % ((" (v%s)" % v) if v else ""))
     return doctest_files(args if args else files_for_doctest, **kwargs)
+
 
 if __name__ == "__main__":
     exit(main(*sys.argv[1:]) > 0)  # 0 if failures == 0 else 1

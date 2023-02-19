@@ -1,6 +1,6 @@
 """Wrapper for objective functions like noise, rotation, gluing args
 """
-from __future__ import absolute_import, division, print_function  #, unicode_literals, with_statement
+from __future__ import absolute_import, division, print_function  # , unicode_literals, with_statement
 import warnings
 from functools import partial
 import numpy as np
@@ -10,9 +10,11 @@ from .transformations import ConstRandnShift, Rotation
 from .constraints_handler import BoundTransform
 from .optimization_tools import EvalParallel2  # for backwards compatibility
 from .utilities.python3for2 import range
-del absolute_import, division, print_function  #, unicode_literals, with_statement
+
+del absolute_import, division, print_function  # , unicode_literals, with_statement
 
 rotate = Rotation()
+
 
 class Function(object):
     """a declarative base class, indicating that a derived class instance
@@ -54,7 +56,9 @@ class Function(object):
       latter uses `fitness_transformations.rotate`.
 
     """
+
     _function_names_to_evaluate_first_found = ["_eval"]
+
     @property
     def function_names_to_evaluate_first_found(self):
         """attributes which are searched for to be called if no function
@@ -69,9 +73,9 @@ class Function(object):
         need to be ever called
         """
         Function.initialize(self, fitness_function)
+
     def initialize(self, fitness_function):
-        """initialization of `Function`
-        """
+        """initialization of `Function`"""
         self.__callable = fitness_function  # this naming prevents interference with a derived class variable
         self.evaluations = 0
         self.ftarget = -np.inf
@@ -104,6 +108,7 @@ class Function(object):
             return list_revert(F)
         else:
             self.evaluations += 1  # somewhat bound to fail
+
 
 class ComposedFunction(Function, list):
     """compose an arbitrary number of functions.
@@ -145,9 +150,10 @@ class ComposedFunction(Function, list):
 
     - The parallelizing call with a list of solutions of the `Function`
       class is not inherited. The inheritence from `Function` is rather
-      declarative than funtional and could be omitted. 
+      declarative than funtional and could be omitted.
 
     """
+
     def __init__(self, list_of_functions, list_of_inverses=None):
         """Caveat: to remain consistent, the ``list_of_inverses`` must be
         updated explicitly, if the list of function was updated after
@@ -175,6 +181,7 @@ class ComposedFunction(Function, list):
             x = self.list_of_inverses[i](x, *args, **kwargs)
         return x
 
+
 class StackFunction(Function):
     """a function that returns ``f1(x[:n1]) + f2(x[n1:])``.
 
@@ -187,14 +194,16 @@ class StackFunction(Function):
     ...     elli48, cma.ff.sphere, 2)
     >>> x = [1, 2, 3, 4]
     >>> assert np.isclose(fcigtab(x), cma.ff.cigtab(np.asarray(x)))
+    """
 
-"""
     def __init__(self, f1, f2, n1):
         self.f1 = f1
         self.f2 = f2
         self.n1 = n1
+
     def _eval(self, x, *args, **kwargs):
-        return self.f1(x[:self.n1], *args, **kwargs) + self.f2(x[self.n1:], *args, **kwargs)
+        return self.f1(x[: self.n1], *args, **kwargs) + self.f2(x[self.n1 :], *args, **kwargs)
+
 
 class GlueArguments(Function):
     """deprecated, use `functools.partial` or
@@ -213,6 +222,7 @@ class GlueArguments(Function):
     >>> assert f([1, 2]) == 1**2 + 1e1 * 2**2
 
     """
+
     def __init__(self, fitness_function, *args, **kwargs):
         """define function, ``args``, and ``kwargs``.
 
@@ -223,6 +233,7 @@ class GlueArguments(Function):
         self.fitness_function = fitness_function  # never used
         self.args = args
         self.kwargs = kwargs
+
     def __call__(self, x, *args, **kwargs):
         """call function with at least one additional argument and
         attached args and kwargs.
@@ -230,8 +241,8 @@ class GlueArguments(Function):
         joined_kwargs = dict(self.kwargs)
         joined_kwargs.update(kwargs)
         x = np.asarray(x)
-        return Function.__call__(self, x, *(args + self.args),
-                                 **joined_kwargs)
+        return Function.__call__(self, x, *(args + self.args), **joined_kwargs)
+
 
 class FBoundTransform(ComposedFunction):
     """shortcut for ``ComposedFunction([f, BoundTransform(bounds).transform])``,
@@ -258,12 +269,12 @@ class FBoundTransform(ComposedFunction):
         ...    [cma.ff.elli, cma.BoundTransform([[0], None]).transform])
 
     """
+
     def __init__(self, fitness_function, bounds):
-        """`bounds[0]` are lower bounds, `bounds[1]` are upper bounds
-        """
+        """`bounds[0]` are lower bounds, `bounds[1]` are upper bounds"""
         self.bound_tf = BoundTransform(bounds)  # not strictly necessary
-        ComposedFunction.__init__(self,
-                    [fitness_function, self.bound_tf.transform])
+        ComposedFunction.__init__(self, [fitness_function, self.bound_tf.transform])
+
 
 class Rotated(ComposedFunction):
     """return a rotated version of a function for testing purpose.
@@ -279,6 +290,7 @@ class Rotated(ComposedFunction):
     >>> assert f1([1, 2]) != f2([1, 2])
 
     """
+
     def __init__(self, f, rotate=None, seed=None):
         """optional argument ``rotate(x)`` must return a (stable) rotation
         of ``x``.
@@ -286,6 +298,7 @@ class Rotated(ComposedFunction):
         if rotate is None:
             rotate = Rotation(seed=seed)
         ComposedFunction.__init__(self, [f, rotate])
+
 
 class Shifted(ComposedFunction):
     """compose a function with a shift in x-space.
@@ -298,11 +311,13 @@ class Shifted(ComposedFunction):
     ``shift=lambda x: x`` would provide "no shift", ``None``
     expands to ``cma.transformations.ConstRandnShift()``.
     """
+
     def __init__(self, f, shift=None):
         """``shift(x)`` must return a (stable) shift of x"""
         if shift is None:
             shift = ConstRandnShift()
         ComposedFunction.__init__(self, [f, shift])
+
 
 class ScaleCoordinates(ComposedFunction):
     """compose a (fitness) function with a scaling for each variable
@@ -327,6 +342,7 @@ class ScaleCoordinates(ComposedFunction):
     True
 
     """
+
     def __init__(self, fitness_function, multipliers=None, zero=None):
         """
         :param fitness_function: a `callable` object
@@ -340,8 +356,7 @@ class ScaleCoordinates(ComposedFunction):
         elements are ignored and the last element is recycled
         if needed.
         """
-        ComposedFunction.__init__(self,
-                [fitness_function, self.scale_and_offset])
+        ComposedFunction.__init__(self, [fitness_function, self.scale_and_offset])
         self.multiplier = multipliers
         if self.multiplier is not None:
             self.multiplier = np.asarray(self.multiplier, dtype=float)
@@ -351,8 +366,10 @@ class ScaleCoordinates(ComposedFunction):
 
     def scale_and_offset(self, x):
         x = np.asarray(x)
+
         def r(vec):
             return utils.recycled(vec, as_=x)
+
         if self.zero is not None and self.multiplier is not None:
             x = r(self.multiplier) * (x - r(self.zero))
         elif self.zero is not None:
@@ -366,8 +383,10 @@ class ScaleCoordinates(ComposedFunction):
         ``y / multipliers + zero``
         """
         x = np.asarray(x)
+
         def r(vec):
             return utils.recycled(vec, as_=x)
+
         if self.zero is not None and self.multiplier is not None:
             x = x / r(self.multiplier) + r(self.zero)
         elif self.zero is not None:
@@ -375,6 +394,7 @@ class ScaleCoordinates(ComposedFunction):
         elif self.multiplier is not None:
             x = x / r(self.multiplier)
         return x
+
 
 class FixVariables(ComposedFunction):
     """Insert variables with given values, thereby reducing the
@@ -414,6 +434,7 @@ class FixVariables(ComposedFunction):
     Supersedes `ExpandSolution`.
 
     """
+
     def __init__(self, f, index_value_pairs):
         """return `f` with reduced dimensionality.
 
@@ -423,6 +444,7 @@ class FixVariables(ComposedFunction):
         # super(FixVariables, self).__init__(
         ComposedFunction.__init__(self, [f, self.insert_variables])
         self.index_value_pairs = dict(index_value_pairs)
+
     def transform(self, x):
         """transform `x` such that it could be used as argument to `self`.
 
@@ -431,9 +453,9 @@ class FixVariables(ComposedFunction):
         ``fun.insert_variables == fun[1]``, that is
         ``np.all(x == fun.transform(fun.insert_variables(x))) is True``.
         """
-        res = [x[i] for i in range(len(x))
-                if i not in self.index_value_pairs]
+        res = [x[i] for i in range(len(x)) if i not in self.index_value_pairs]
         return res if isinstance(x, list) else np.asarray(res)
+
     def insert_variables(self, x):
         """return `x` with inserted fixed values"""
         if len(self.index_value_pairs) == 0:
@@ -445,25 +467,31 @@ class FixVariables(ComposedFunction):
             y = np.asarray(y)  # doubles the necessary time
         return y
 
+
 class Expensify(Function):
     """Add waiting time to each evaluation, to simulate "expensive"
     behavior"""
+
     def __init__(self, callable_, time=1):
         """add time in seconds"""
         Function.__init__(self)  # callable_ could go here
         self.time = time
         self.callable = callable_
+
     def __call__(self, *args, **kwargs):
         time.sleep(self.time)
         Function.__call__(self, *args, **kwargs)
         return self.callable(*args, **kwargs)
 
+
 class SomeNaNFitness(Function):
     """transform ``fitness_function`` to return sometimes ``NaN``"""
+
     def __init__(self, fitness_function, probability_of_nan=0.1):
         Function.__init__(self)
         self.fitness_function = fitness_function
         self.p = probability_of_nan
+
     def __call__(self, x, *args):
         Function.__call__(self, x, *args)
         if np.random.rand(1) <= self.p:
@@ -471,11 +499,11 @@ class SomeNaNFitness(Function):
         else:
             return self.fitness_function(x, *args)
 
+
 class NoisyFitness(Function):
     """apply noise via ``f += rel_noise(dim) * f + abs_noise(dim)``"""
-    def __init__(self, fitness_function,
-                 rel_noise=lambda dim: 1.1 * np.random.randn() / dim,
-                 abs_noise=lambda dim: 1.1 * np.random.randn()):
+
+    def __init__(self, fitness_function, rel_noise=lambda dim: 1.1 * np.random.randn() / dim, abs_noise=lambda dim: 1.1 * np.random.randn()):
         """attach relative and absolution noise to ``fitness_function``.
 
         Relative noise is by default computed using the length of the
@@ -502,6 +530,7 @@ class NoisyFitness(Function):
             f += self.abs_noise(len(x))
         return f
 
+
 class IntegerMixedFunction(ComposedFunction):
     """compose fitness function with some integer variables.
 
@@ -513,15 +542,17 @@ class IntegerMixedFunction(ComposedFunction):
     ``1 / (2 * len(integer_variable_indices) + 1)``, in which case in
     an independent model at least 33% (1 integer variable) -> 39% (many
     integer variables) of the solutions should have an integer mutation
-    on average. Option ``integer_variables`` of `cma.CMAOptions` 
-    implements this simple measure. 
+    on average. Option ``integer_variables`` of `cma.CMAOptions`
+    implements this simple measure.
     """
+
     def __init__(self, function, integer_variable_indices, operator=np.floor, copy_arg=True):
         """apply operator(x[i]) for i in integer_variable_indices before to call function(x)"""
         ComposedFunction.__init__(self, [function, self._flatten])
         self.integer_variable_indices = integer_variable_indices
         self.operator = operator
         self.copy_arg = copy_arg
+
     def _flatten(self, x):
         x = np.array(x, copy=self.copy_arg)
         for i in sorted(self.integer_variable_indices):

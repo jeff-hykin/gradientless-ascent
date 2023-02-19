@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """A collection of boundary and (in future) constraints handling classes.
 """
-from __future__ import absolute_import, division, print_function  #, unicode_literals
+from __future__ import absolute_import, division, print_function  # , unicode_literals
+
 # __package__ = 'cma'
 import warnings as _warnings
 import collections as _collections, functools as _functools
@@ -13,12 +14,15 @@ from .logger import Logger as _Logger  # we can assign _Logger = cma.logger.Logg
 from .transformations import BoxConstraintsLinQuadTransformation
 from .optimization_tools import BestSolution2
 from .utilities.python3for2 import range
-del absolute_import, division, print_function  #, unicode_literals
 
-_warnings.filterwarnings('once', message="``import moarchiving`` failed.*")
+del absolute_import, division, print_function  # , unicode_literals
+
+_warnings.filterwarnings("once", message="``import moarchiving`` failed.*")
+
 
 class BoundaryHandlerBase(object):
     """quick hack versatile base class"""
+
     def __init__(self, bounds):
         """bounds are not copied, but possibly modified and
         put into a normalized form: ``bounds`` can be ``None``
@@ -33,10 +37,7 @@ class BoundaryHandlerBase(object):
             self.bounds = None
         else:
             if not isinstance(bounds, (tuple, list)) or len(bounds) != 2:
-                raise ValueError(
-                    "bounds must be None, empty, or a list of length 2"
-                    " where each element may be a scalar, list, array,"
-                    " or None; type(bounds) was: %s" % str(type(bounds)))
+                raise ValueError("bounds must be None, empty, or a list of length 2" " where each element may be a scalar, list, array," " or None; type(bounds) was: %s" % str(type(bounds)))
             l = [None, None]  # figure out lengths
             for i in [0, 1]:
                 try:
@@ -44,13 +45,10 @@ class BoundaryHandlerBase(object):
                 except TypeError:
                     bounds[i] = [bounds[i]]
                     l[i] = 1
-                if all([bounds[i][j] is None or not np.isfinite(bounds[i][j])
-                        for j in rglen(bounds[i])]):
+                if all([bounds[i][j] is None or not np.isfinite(bounds[i][j]) for j in rglen(bounds[i])]):
                     bounds[i] = None
-                if bounds[i] is not None and any([bounds[i][j] == (-1)**i * np.inf
-                                                  for j in rglen(bounds[i])]):
-                    raise ValueError('lower/upper is +inf/-inf and ' +
-                                     'therefore no finite feasible solution is available')
+                if bounds[i] is not None and any([bounds[i][j] == (-1) ** i * np.inf for j in rglen(bounds[i])]):
+                    raise ValueError("lower/upper is +inf/-inf and " + "therefore no finite feasible solution is available")
             self.bounds = bounds
 
     def __call__(self, solutions, *args, **kwargs):
@@ -71,7 +69,7 @@ class BoundaryHandlerBase(object):
 
     def repair(self, x, copy_if_changed=True):
         """projects infeasible values on the domain bound, might be
-        overwritten by derived class """
+        overwritten by derived class"""
         copy = copy_if_changed
         if self.bounds is None:
             return x
@@ -80,8 +78,7 @@ class BoundaryHandlerBase(object):
                 continue
             for i in rglen(x):
                 idx = min([i, len(self.bounds[ib]) - 1])
-                if self.bounds[ib][idx] is not None and \
-                        (-1)**ib * x[i] < (-1)**ib * self.bounds[ib][idx]:
+                if self.bounds[ib][idx] is not None and (-1) ** ib * x[i] < (-1) ** ib * self.bounds[ib][idx]:
                     if copy:
                         x = np.array(x, copy=True)
                         copy = False
@@ -90,21 +87,21 @@ class BoundaryHandlerBase(object):
 
     def inverse(self, y, copy_if_changed=True):
         """inverse of repair if it exists, at least it should hold
-         ``repair == repair o inverse o repair``"""
+        ``repair == repair o inverse o repair``"""
         return y
 
     def get_bounds(self, which, dimension):
         """``get_bounds('lower', 8)`` returns the lower bounds in 8-D"""
-        if which in ['lower', 0, '0']:
+        if which in ["lower", 0, "0"]:
             return self._get_bounds(0, dimension)
-        elif which in ['upper', 1, '1']:
+        elif which in ["upper", 1, "1"]:
             return self._get_bounds(1, dimension)
         else:
             raise ValueError("argument which must be 'lower' or 'upper'")
 
     def _get_bounds(self, ib, dimension):
         """ib == 0/1 means lower/upper bound, return a vector of length
-        `dimension` """
+        `dimension`"""
         sign_ = 2 * ib - 1
         assert sign_**2 == 1
         if self.bounds is None or self.bounds[ib] is None:
@@ -140,8 +137,7 @@ class BoundaryHandlerBase(object):
                 idx = min([i, len(self.bounds[ib]) - 1])
                 if self.bounds[ib][idx] is None:
                     continue
-                if ((ib == 0 and x[i] < self.bounds[ib][idx]) or (
-                     ib == 1 and x[i] > self.bounds[ib][idx])):
+                if (ib == 0 and x[i] < self.bounds[ib][idx]) or (ib == 1 and x[i] > self.bounds[ib][idx]):
                     return False
         return True
 
@@ -161,9 +157,8 @@ class BoundaryHandlerBase(object):
                 idx = min([i, len(self.bounds[ib]) - 1])
                 if self.bounds[ib][idx] is None:
                     continue
-                if ((ib == 0 and x[i] < self.bounds[ib][idx]) or (
-                     ib == 1 and x[i] > self.bounds[ib][idx])):
-                   idxs += [i]
+                if (ib == 0 and x[i] < self.bounds[ib][idx]) or (ib == 1 and x[i] > self.bounds[ib][idx]):
+                    idxs += [i]
         return sorted(idxs)
 
     def get_bound(self, index):
@@ -194,34 +189,30 @@ class BoundaryHandlerBase(object):
                 except TypeError:
                     bounds[i] = [bounds[i]]
                     l[i] = 1
-            if l[0] != l[1] and 1 not in l and None not in (
-                    bounds[0][-1], bounds[1][-1]):  # disallow different lengths
-                raise ValueError(
-                    "lower and upper bounds must have the same length\n"
-                    "or length one or `None` as last element (the last"
-                    " element is always recycled).\n"
-                    "Lengths were %s"
-                    % str(l))
+            if l[0] != l[1] and 1 not in l and None not in (bounds[0][-1], bounds[1][-1]):  # disallow different lengths
+                raise ValueError("lower and upper bounds must have the same length\n" "or length one or `None` as last element (the last" " element is always recycled).\n" "Lengths were %s" % str(l))
             b = []  # bounds in different format
             try:
                 for i in range(max(l)):
-                    b.append([bounds[0][min((i, l[0] - 1))],
-                              bounds[1][min((i, l[1] - 1))]])
+                    b.append([bounds[0][min((i, l[0] - 1))], bounds[1][min((i, l[1] - 1))]])
             except (TypeError, IndexError):
-                print("boundaries must be provided in the form " +
-                      "[scalar_of_vector, scalar_or_vector]")
+                print("boundaries must be provided in the form " + "[scalar_of_vector, scalar_or_vector]")
                 raise
         return b
 
+
 class BoundNone(BoundaryHandlerBase):
     """no boundaries"""
+
     def __init__(self, bounds=None):
         if bounds is not None:
             raise ValueError()
         # BoundaryHandlerBase.__init__(self, None)
         super(BoundNone, self).__init__(None)
+
     def is_in_bounds(self, x):
         return True
+
 
 class BoundTransform(BoundaryHandlerBase):
     """Handle boundaries by a smooth, piecewise linear and quadratic
@@ -263,6 +254,7 @@ class BoundTransform(BoundaryHandlerBase):
     Details: this class uses ``class BoxConstraintsLinQuadTransformation``
 
     """
+
     def __init__(self, bounds=None):
         """Argument bounds can be `None` or ``bounds[0]`` and ``bounds[1]``
         are lower and upper domain boundaries, each is either `None` or
@@ -274,11 +266,9 @@ class BoundTransform(BoundaryHandlerBase):
         self.bounds_tf = BoxConstraintsLinQuadTransformation(self.to_dim_times_two(bounds))
 
     def repair(self, x, copy_if_changed=True):
-        """transforms ``x`` into the bounded domain.
-        """
+        """transforms ``x`` into the bounded domain."""
         copy = copy_if_changed
-        if self.bounds is None or (self.bounds[0] is None and
-                                   self.bounds[1] is None):
+        if self.bounds is None or (self.bounds[0] is None and self.bounds[1] is None):
             return x
         return np.asarray(self.bounds_tf(x, copy))
 
@@ -286,13 +276,11 @@ class BoundTransform(BoundaryHandlerBase):
         return self.repair(x)
 
     def inverse(self, x, copy_if_changed=True):
-        """inverse transform of ``x`` from the bounded domain.
-
-        """
-        if self.bounds is None or (self.bounds[0] is None and
-                                   self.bounds[1] is None):
+        """inverse transform of ``x`` from the bounded domain."""
+        if self.bounds is None or (self.bounds[0] is None and self.bounds[1] is None):
             return x
         return np.asarray(self.bounds_tf.inverse(x, copy_if_changed))  # this doesn't exist
+
 
 class BoundPenalty(BoundaryHandlerBase):
     """Compute a bound penalty and update coordinate-wise penalty weights.
@@ -320,7 +308,7 @@ class BoundPenalty(BoundaryHandlerBase):
     >>> if res[1] >= 13.76: print(res)  # should never happen
 
     Reference: Hansen et al 2009, A Method for Handling Uncertainty...
-    IEEE TEC, with addendum, see 
+    IEEE TEC, with addendum, see
     https://ieeexplore.ieee.org/abstract/document/4634579
     https://hal.inria.fr/inria-00276216/file/TEC2008.pdf
 
@@ -337,6 +325,7 @@ class BoundPenalty(BoundaryHandlerBase):
     relatively involved. Consider also that bounds are related with the
     geno- to phenotype transformation.
     """
+
     def __init__(self, bounds=None):
         """Argument bounds can be `None` or ``bounds[0]`` and ``bounds[1]``
         are lower  and upper domain boundaries, each is either `None` or
@@ -352,9 +341,7 @@ class BoundPenalty(BoundaryHandlerBase):
         self.hist = []  # delta-f history
 
     def repair(self, x, copy_if_changed=True):
-        """sets out-of-bounds components of ``x`` on the bounds.
-
-        """
+        """sets out-of-bounds components of ``x`` on the bounds."""
         # TODO (old data): CPU(N,lam,iter=20,200,100): 3.3s of 8s for two bounds, 1.8s of 6.5s for one bound
         # remark: np.max([bounds[0], x]) is about 40 times slower than max((bounds[0], x))
         copy = copy_if_changed
@@ -411,12 +398,12 @@ class BoundPenalty(BoundaryHandlerBase):
             # CAVE: this does not work with already repaired values!!
             # CPU(N,lam,iter=20,200,100)?: 3s of 10s, np.array(xi): 1s
             # remark: one deep copy can be prevented by xold = xi first
-            xpheno = gp.pheno(archive[xi]['geno'])
+            xpheno = gp.pheno(archive[xi]["geno"])
             # necessary, because xi was repaired to be in bounds
             xinbounds = self.repair(xpheno)
             # could be omitted (with unpredictable effect in case of external repair)
             fac = 1  # exp(0.1 * (log(self.scal) - np.mean(self.scal)))
-            pen.append(sum(gamma * ((xinbounds - xpheno) / fac)**2) / len(xi))
+            pen.append(sum(gamma * ((xinbounds - xpheno) / fac) ** 2) / len(xi))
         return pen[0] if x_is_single_vector else pen
 
     # ____________________________________________________________
@@ -443,17 +430,14 @@ class BoundPenalty(BoundaryHandlerBase):
             `gp` of type `GenoPheno` are used.
 
         """
-        if self.bounds is None or (self.bounds[0] is None and
-                                   self.bounds[1] is None):
+        if self.bounds is None or (self.bounds[0] is None and self.bounds[1] is None):
             return self
 
         N = es.N
         # ## prepare
         # compute varis = sigma**2 * C_ii
         if 11 < 3:  # old
-            varis = es.sigma**2 * np.array(N * [es.C] if np.isscalar(es.C) else (# scalar case
-                                    es.C if np.isscalar(es.C[0]) else  # diagonal matrix case
-                                    [es.C[i][i] for i in range(N)]))  # full matrix case
+            varis = es.sigma**2 * np.array(N * [es.C] if np.isscalar(es.C) else (es.C if np.isscalar(es.C[0]) else [es.C[i][i] for i in range(N)]))  # scalar case  # diagonal matrix case  # full matrix case
         else:
             varis = es.sigma**2 * es.sm.variances
 
@@ -477,14 +461,16 @@ class BoundPenalty(BoundaryHandlerBase):
 
         # ## prepare
         dfit = np.median(self.hist)  # median interquartile range
-        damp = min(1, es.sp.weights.mueff / 10. / N)
+        damp = min(1, es.sp.weights.mueff / 10.0 / N)
 
         # ## set/update weights
         # Throw initialization error
         if len(self.hist) == 0:
-            raise ValueError('wrongful initialization, no feasible solution sampled. ' +
-                'Reasons can be mistakenly set bounds (lower bound not smaller than upper bound) or a too large initial sigma0 or... ' +
-                'See description of argument func in help(cma.fmin) or an example handling infeasible solutions in help(cma.CMAEvolutionStrategy). ')
+            raise ValueError(
+                "wrongful initialization, no feasible solution sampled. "
+                + "Reasons can be mistakenly set bounds (lower bound not smaller than upper bound) or a too large initial sigma0 or... "
+                + "See description of argument func in help(cma.fmin) or an example handling infeasible solutions in help(cma.CMAEvolutionStrategy). "
+            )
         # initialize weights
         if dmean.any() and (not self.weights_initialized or es.countiter == 2):  # TODO
             self.gamma = np.array(N * [2 * dfit])  ## BUGBUGzzzz: N should be phenotypic (bounds are in phenotype), but is genotypic
@@ -495,32 +481,39 @@ class BoundPenalty(BoundaryHandlerBase):
             if 1 < 3:  # this is better, around a factor of two
                 # increase single weights possibly with a faster rate than they can decrease
                 #     value unit of edst is std dev, 3==random walk of 9 steps
-                self.gamma *= np.exp((edist > 0) * np.tanh(edist / 3) / 2.)**damp
+                self.gamma *= np.exp((edist > 0) * np.tanh(edist / 3) / 2.0) ** damp
                 # decrease all weights up to the same level to avoid single extremely small weights
                 #    use a constant factor for pseudo-keeping invariance
-                self.gamma[self.gamma > 5 * dfit] *= np.exp(-1. / 3)**damp
+                self.gamma[self.gamma > 5 * dfit] *= np.exp(-1.0 / 3) ** damp
                 #     self.gamma[idx] *= exp(5*dfit/self.gamma[idx] - 1)**(damp/3)
             elif 1 < 3 and (edist > 0).any():  # previous method
                 # CAVE: min was max in TEC 2009
-                self.gamma[edist > 0] *= 1.1**min(1, es.sp.weights.mueff / 10. / N)
+                self.gamma[edist > 0] *= 1.1 ** min(1, es.sp.weights.mueff / 10.0 / N)
                 # max fails on cigtab(N=12,bounds=[0.1,None]):
                 # self.gamma[edist>0] *= 1.1**max(1, es.sp.weights.mueff/10./N) # this was a bug!?
                 # self.gamma *= exp((edist>0) * np.tanh(edist))**min(1, es.sp.weights.mueff/10./N)
             else:  # alternative version, but not better
                 solutions = es.pop  # this has not been checked
                 r = self.feasible_ratio(solutions)  # has to be the averaged over N iterations
-                self.gamma *= np.exp(np.max([N * [0], 0.3 - r], axis=0))**min(1, es.sp.weights.mueff / 10 / N)
+                self.gamma *= np.exp(np.max([N * [0], 0.3 - r], axis=0)) ** min(1, es.sp.weights.mueff / 10 / N)
         es.more_to_write += list(self.gamma) if self.weights_initialized else N * [1.0]
         # ## return penalty
         # es.more_to_write = self.gamma if not np.isscalar(self.gamma) else N*[1]
         return self  # bound penalty values
 
+
 def _g_pos_max(gvals):
     return max(gi if gi > 0 else 0 for gi in gvals)
+
+
 def _g_pos_sum(gvals):
     return sum(gi for gi in gvals if gi > 0)
+
+
 def _g_pos_squared_sum(gvals):
     return sum(gi**2 for gi in gvals if gi > 0)
+
+
 class ConstrainedSolutionsArchive:
     """Biobjective Pareto archive to store some Pareto optimal solutions
     for constrained optimization.
@@ -529,8 +522,8 @@ class ConstrainedSolutionsArchive:
     is by default the sum of the positive parts.
 
     The Pareto archive is maintained in the `archive` attribute and the
-    Pareto optimal solutions can be recovered in `archive.infos`.
-"""
+    Pareto optimal solutions can be recovered in `archive.infos`."""
+
     def __init__(self, aggregator=_g_pos_sum):
         self.aggregator = aggregator
         self.archive = None
@@ -539,22 +532,26 @@ class ConstrainedSolutionsArchive:
         try:
             import moarchiving
         except ImportError:
-            m = ("``import moarchiving`` failed, hence convergence tracking "
-                 "is disabled. \n  'pip install moarchiving' should fix this.")
+            m = "``import moarchiving`` failed, hence convergence tracking " "is disabled. \n  'pip install moarchiving' should fix this."
             _warnings.warn(m)
             return
         self.archive = moarchiving.BiobjectiveNondominatedSortedList()
+
     def update(self, f, g, info=None):
         self.count += 1
         if self.archive is not None:
             gagg = self.aggregator(g)
-            try: self.archive.add([f, gagg], info=info)
-            except TypeError: self.archive.add([f, gagg])  # previous interface
+            try:
+                self.archive.add([f, gagg], info=info)
+            except TypeError:
+                self.archive.add([f, gagg])  # previous interface
             while len(self.archive) > self.maxlen:
                 if self.archive[1][1] > 0:  # keep at least one infeasible solution
                     self.archive.remove(self.archive[0])
                 else:
                     self.archive.remove(self.archive[-1])
+
+
 class PopulationEvaluator(object):
     """evaluate and store f- and g-values of a population in attributes F and G.
 
@@ -567,6 +564,7 @@ class PopulationEvaluator(object):
     ``true_g > 0``. Named solutions are not offset.
 
     """
+
     def __init__(self, objective, constraints, insert=True, offset_from_true_g=False):
         self.objective = objective
         self.constraints = constraints
@@ -576,13 +574,13 @@ class PopulationEvaluator(object):
     def __call__(self, X, **kwargs):
         """`kwargs` are named solutions resulting in
 
-    ::
+        ::
 
-            self.name['x'] = kwargs[name]
-            self.name['f'] = self.objective(kwargs[name])
-            self.name['g'] = self.constraints(kwargs[name])
+                self.name['x'] = kwargs[name]
+                self.name['f'] = self.objective(kwargs[name])
+                self.name['g'] = self.constraints(kwargs[name])
 
-        Store result in attributes `F` and `G`.
+            Store result in attributes `F` and `G`.
         """
         self.X = X
         self.F = [self.objective(x) for x in X]
@@ -595,7 +593,7 @@ class PopulationEvaluator(object):
             except (AttributeError, TypeError):
                 pass
         try:  # use constraints.true_g attribute if available
-            if not hasattr(self.constraints, 'true_g'):
+            if not hasattr(self.constraints, "true_g"):
                 raise AttributeError  # avoid to repeat one evaluation in next line
             self.G_all = [(self.constraints(x), self.constraints.true_g) for x in X]
         except AttributeError:  # "regular" execution path
@@ -614,12 +612,9 @@ class PopulationEvaluator(object):
                     for i in range(len(self.G)):  # add offset on each infeasible candidate
                         if self.G_true[i][j] > 0:
                             self.G[i][j] += offset
-                assert np.all([np.all(np.asarray(self.G[i])[np.asarray(self.G_true[i]) > 0] >= 0)
-                            for i in range(len(self.G))])
+                assert np.all([np.all(np.asarray(self.G[i])[np.asarray(self.G_true[i]) > 0] >= 0) for i in range(len(self.G))])
         for name, x in kwargs.items():
-            setattr(self, name, {'x': x,
-                                 'f': self.objective(x),
-                                 'g': self.constraints(x)})
+            setattr(self, name, {"x": x, "f": self.objective(x), "g": self.constraints(x)})
         return self
 
     @property
@@ -627,6 +622,7 @@ class PopulationEvaluator(object):
         """or bias for equality constraints"""
         return np.mean(np.asarray(self.G) <= 0, axis=0)
         # return [np.mean(g <= 0) for g in np.asarray(self.G).T]
+
 
 class DequeCDF(_collections.deque):
     """a queue with (in case) element-wise cdf computation.
@@ -643,6 +639,7 @@ class DequeCDF(_collections.deque):
     '0.1 0.5 0.6 1.0 0.75'
 
     """
+
     def cdf(self, i, val=0, len_=None):
         """return ecdf(`val`) from the `i`-th element of the last `len_`
         values in self,
@@ -653,24 +650,28 @@ class DequeCDF(_collections.deque):
         j0 = int(min((len_ or len(self), len(self))))
         data = np.asarray([self[j][i] for j in range(-j0, 0)])
         return np.mean((data < val) + 0.5 * (data == val))
+
     def cdf1(self, val=0, len_=None):
         """return ECDF at `val` in case this is a `deque` of scalars"""
         j0 = int(min((len_ or len(self), len(self))))
         data = np.asarray([self[j] for j in range(-j0, 0)])
         return np.mean((data < val) + 0.5 * (data == val))
 
+
 class LoggerList(list):
     """list of loggers with plot method"""
+
     def plot(self, moving_window_width=7):
         """versatile plot method, argument list positions may change"""
         import matplotlib
         from matplotlib import pyplot as plt
+
         # _, axes = plt.gcf().subplots(2, 2)  # gcf().subplots return array of subplots, plt.subplots returns array of axes
         # axes = list(axes[0]) + list(axes[1])
         for i, logger in enumerate(self):
             # plt.sca(axes[i])
             with _warnings.catch_warnings():  # catch misfiring add_subplot warning
-                _warnings.filterwarnings('ignore', message='Adding an axes using the same arguments')
+                _warnings.filterwarnings("ignore", message="Adding an axes using the same arguments")
                 plt.subplot(2, 2, i + 1)
             logger.plot()
             if len(logger.data.shape) > 1 and logger.data.shape[1] > 1:
@@ -678,29 +679,35 @@ class LoggerList(list):
                     if j < len(logger.data.T) - 1:  # variable number annotation
                         plt.text(len(d), d[-1], str(j))
                     if i == 1:  # plot rolling average
-                        plt.plot(moving_average(d, min((moving_window_width, len(d)))),
-                                 color='r', linewidth=0.15)
+                        plt.plot(moving_average(d, min((moving_window_width, len(d)))), color="r", linewidth=0.15)
                 if i == 0:
                     v = np.abs(logger.data)
-                    min_val = max((1e-9, np.min(v[v>0])))
-                    if matplotlib.__version__[:3] < '3.3':
+                    min_val = max((1e-9, np.min(v[v > 0])))
+                    if matplotlib.__version__[:3] < "3.3":
                         # a terrible interface change that swallows the new/old parameter and breaks code
-                        plt.yscale('symlog', linthreshy=min_val)  # see matplotlib.scale.SymmetricalLogScale
+                        plt.yscale("symlog", linthreshy=min_val)  # see matplotlib.scale.SymmetricalLogScale
                     else:
-                        plt.yscale('symlog', linthresh=min_val)
+                        plt.yscale("symlog", linthresh=min_val)
+
 
 def _log_g(s):
     return s.g + [0]
+
+
 def _log_feas_events(s):
-    return [i + 0.5 * (gi > 0) - 0.25 + 0.2 * np.tanh(gi) for i, gi in enumerate(s.g)
-            ] + [len(s.g) + np.any(np.asarray(s.g) > 0)]
+    return [i + 0.5 * (gi > 0) - 0.25 + 0.2 * np.tanh(gi) for i, gi in enumerate(s.g)] + [len(s.g) + np.any(np.asarray(s.g) > 0)]
+
+
 def _log_lam(s):
     """for active constraints, lam is generally positive because Dg and Df are opposed"""
     v = np.log10(np.maximum(1e-9, np.abs(s.lam - (0 if s.lam_opt is None else s.lam_opt))))
     return np.hstack([v, 0])  # add column to get same colors as _log_feas_events
+
+
 def _log_mu(s):
     v = np.log10(np.maximum(s.mu, 1e-9))
     return np.hstack([v, 0])  # add column to get same colors as _log_feas_events
+
 
 class CountLastSameChanges:
     """An array/list of successive same-sign counts.
@@ -714,6 +721,7 @@ class CountLastSameChanges:
 
     TODO: parameters may need to depend on population size?
     """
+
     def __init__(self, parent=None):
         self.same_changes = None
         self.parent = parent  # get easy access for hacks, not in use
@@ -722,6 +730,7 @@ class CountLastSameChanges:
         self.chi_exponent_threshold = None  # waiting and ramp up time
         self.chi_exponent_factor = None  # steepness of ramp up
         "  increase chi exponent up to given threshold, can make up for dimension dependent chi"
+
     def init(self, dimension, force=False):
         """do not overwrite user-set values unless `force`"""
         if force or self.same_changes is None:
@@ -729,21 +738,24 @@ class CountLastSameChanges:
         if force or self.chi_exponent_threshold is None:  # threshold for number of consecutive changes
             # self.chi_exponent_threshold = 5 + self.dimension**0.5  # previous value, probably too small in >- 20-D
             # self.chi_exponent_threshold = 5 + self.dimension**0.75  # sweeps in aug-lag4-mu-update.ipynv
-            self.chi_exponent_threshold = 2 + self.dimension 
+            self.chi_exponent_threshold = 2 + self.dimension
         if force or self.chi_exponent_factor is None:  # factor used in shape_exponent
             # self.chi_exponent_factor = 3 / dimension**0.5 # previous value
             # self.chi_exponent_factor = 1 * dimension**0.25 / self.chi_exponent_threshold  # steepness of ramp up
             self.chi_exponent_factor = 4 / self.chi_exponent_threshold  # steepness of ramp up
         return self
+
     @property
     def dimension(self):
         return len(self.same_changes)
+
     def update(self, i, change):
         """update ``same_changes[i]`` count based on the sign of `change`"""
         if change * self.same_changes[i] < 0:
             self.same_changes[i] = 0
         self.same_changes[i] += change
         return self
+
     def shape_exponent(self, i):
         """return value to be added to exponent from change count.
 
@@ -761,11 +773,11 @@ class CountLastSameChanges:
         d *= d * s > 0  # sign must not have changed
         return self.chi_exponent_factor * s * min((self.chi_exponent_threshold, s * d))  # bound change
 
+
 def constraints_info_dict(count, x, f, g, g_al):
     """return dictionary with arg values, mainly there to unify names"""
-    return {'x': x,  # caveat: x is not a copy
-            'f': f, 'g': g, 'f_al': f + sum(g_al), 'g_al': g_al,
-            'count': count}
+    return {"x": x, "f": f, "g": g, "f_al": f + sum(g_al), "g_al": g_al, "count": count}  # caveat: x is not a copy
+
 
 class AugmentedLagrangian(object):
     """Augmented Lagrangian with adaptation of the coefficients
@@ -827,7 +839,7 @@ class AugmentedLagrangian(object):
     More testing based on the simpler `ConstrainedFitnessAL` interface:
 
     >>> import cma
-    >>> for algorithm, evals in zip((0, 1, 2, 3), (2000, 2200, 1500, 1800)): 
+    >>> for algorithm, evals in zip((0, 1, 2, 3), (2000, 2200, 1500, 1800)):
     ...     alf = cma.ConstrainedFitnessAL(cma.ff.sphere, lambda x: [x[0] + 1], 3,
     ...                                    find_feasible_first=True)
     ...     _ = alf.al.set_algorithm(algorithm)
@@ -838,8 +850,8 @@ class AugmentedLagrangian(object):
     ...     assert es.countevals < evals, (algorithm, es.countevals)
     ...     assert alf.best_feas.f < 10, (algorithm, str(alf.best_feas))
     ...     # print(algorithm, es.countevals, ) #alf.best_feas.__dict__)
+    """
 
-"""
     def __init__(self, dimension, equality=False):
         """use `set_algorithm()` and ``set_...()`` methods to change defaults"""
         self.algorithm = 0  # 1 = original, < 1 is now default
@@ -872,13 +884,15 @@ class AugmentedLagrangian(object):
     def set_atamna2017(self):
         """Atamna et al 2017 parameter settings"""
         self.k1 = 3
-        self.chi_domega = 2**(1. / 5 / self.dimension)  # factor for mu change, 5 == domega
+        self.chi_domega = 2 ** (1.0 / 5 / self.dimension)  # factor for mu change, 5 == domega
         return self
+
     def set_dufosse2020(self):
         """Dufosse & Hansen 2020 parameter settings"""
         self.k1 = 10
-        self.chi_domega = 2**(1. / self.dimension**0.5)
+        self.chi_domega = 2 ** (1.0 / self.dimension**0.5)
         return self
+
     def _set_parameters(self):
         """set parameters based on the value of `self.algorithm`"""
         if self.algorithm <= 0:  # default is 3
@@ -889,6 +903,7 @@ class AugmentedLagrangian(object):
             self.set_dufosse2020()
         else:
             raise ValueError("Algorithm id {} is not recognized".format(self.algorithm))
+
     def set_algorithm(self, algorithm=None):
         """if algorithm not `None`, set it and return self,
 
@@ -908,42 +923,38 @@ class AugmentedLagrangian(object):
         """allow to reset the logger with a single call"""
         self.loggers = LoggerList()
         if self.logging > 0:
-            self.loggers.append(_Logger(self, callables=[_log_g],
-                            labels=['constraint values'],
-                            name='outauglagg'))
-            self.loggers.append(_Logger(self, callables=[_log_feas_events],
-                            labels=['sign(gi) / 2 + i',  'overall feasibility'],
-                            name='outauglagfeas'))
-            self.loggers.append(_Logger(self, callables=[_log_lam],
-                labels=['lg(abs(lambda))' if self.lam_opt is None
-                        else 'lg(abs(lambda-lam_opt))'],
-                name='outauglaglam'))
-            self.loggers.append(_Logger(self, callables=[_log_mu],
-                            labels=['lg(mu)'], name='outauglagmu'))
+            self.loggers.append(_Logger(self, callables=[_log_g], labels=["constraint values"], name="outauglagg"))
+            self.loggers.append(_Logger(self, callables=[_log_feas_events], labels=["sign(gi) / 2 + i", "overall feasibility"], name="outauglagfeas"))
+            self.loggers.append(_Logger(self, callables=[_log_lam], labels=["lg(abs(lambda))" if self.lam_opt is None else "lg(abs(lambda-lam_opt))"], name="outauglaglam"))
+            self.loggers.append(_Logger(self, callables=[_log_mu], labels=["lg(mu)"], name="outauglagmu"))
             self.logger_mu_conditions = None
             if self.algorithm in (1, 2):
-                self.logger_mu_conditions = _Logger("mu_conditions", labels=[
-                            r'$\mu$ increases',
-                            r'$\mu g^2 < %.0f |\Delta h| / n$' % self.k1,
-                            r'$|\Delta g| < |g| / %.0f$' % self.k2])
+                self.logger_mu_conditions = _Logger("mu_conditions", labels=[r"$\mu$ increases", r"$\mu g^2 < %.0f |\Delta h| / n$" % self.k1, r"$|\Delta g| < |g| / %.0f$" % self.k2])
 
     @property
     def m(self):
         """number of constraints, raise `TypeError` if not set yet"""
         return len(self.lam)
+
     @property
     def is_initialized(self):
-        try: return all(self._initialized)
-        except TypeError: return bool(self._initialized)
+        try:
+            return all(self._initialized)
+        except TypeError:
+            return bool(self._initialized)
+
     @property
     def count_initialized(self):
         """number of constraints with initialized coefficients"""
         return 0 if self.mu is None else sum(self._initialized * (self.mu > 0))
+
     @property
     def feasibility_ratios(self):
         """or bias for equality constraints, versatile interface may change"""
-        try: return [np.mean(np.asarray(g) <= 0) for g in np.asarray(self.G).T]
-        except AttributeError: return None
+        try:
+            return [np.mean(np.asarray(g) <= 0) for g in np.asarray(self.G).T]
+        except AttributeError:
+            return None
 
     def set_m(self, m):
         """initialize attributes which depend on the number of constraints.
@@ -958,10 +969,10 @@ class AugmentedLagrangian(object):
 
     def _check_dtypes(self):
         """in case the user set the attributes"""
-        for name in ['mu', 'lam']:
-            if getattr(self, name).dtype != 'float':
-                setattr(self, name, np.array(getattr(self, name), dtype='float'))
-        assert self._initialized.dtype == 'bool'
+        for name in ["mu", "lam"]:
+            if getattr(self, name).dtype != "float":
+                setattr(self, name, np.array(getattr(self, name), dtype="float"))
+        assert self._initialized.dtype == "bool"
 
     def set_coefficients(self, F, G):
         """compute initial coefficients based on some f- and g-values.
@@ -990,18 +1001,17 @@ class AugmentedLagrangian(object):
             self.lam_old, self.mu_old = self.lam[:], self.mu[:]  # in case the user didn't mean to
             self._initialized = np.array(self.m * [self._initialized])
         self._check_dtypes()
-        idx = _and(_or(_not(self._initialized), self.mu == 0),
-                   _or(sign_average > -0.8, self.isequality))
+        idx = _and(_or(_not(self._initialized), self.mu == 0), _or(sign_average > -0.8, self.isequality))
         # print(len(F), len(self.G))
         if np.any(idx):
             df = _Mh.iqr(F)
-            dG = np.asarray([_Mh.iqr(g) for g in G])      # only needed for G[idx], but like
+            dG = np.asarray([_Mh.iqr(g) for g in G])  # only needed for G[idx], but like
             dG2 = np.asarray([_Mh.iqr(g**2) for g in G])  # this simpler in later indexing
             if np.any(df == 0) or np.any(dG == 0) or np.any(dG2 == 0):
                 _warnings.warn("iqr(f), iqr(G), iqr(G**2)) == %s, %s, %s" % (str(df), str(dG), str(dG2)))
             assert np.all(df >= 0) and np.all(dG >= 0) and np.all(dG2 >= 0)
             # 1 * dG2 leads to much too small values for Himmelblau
-            mu_new = 2. / 5 * df / self.dimension / (dG + 1e-6 * dG2 + 1e-11 * (df + 1))  # TODO: totally out of thin air
+            mu_new = 2.0 / 5 * df / self.dimension / (dG + 1e-6 * dG2 + 1e-11 * (df + 1))  # TODO: totally out of thin air
             idx_inequ = _and(idx, _not(self.isequality))
             if np.any(idx_inequ):
                 self.lam[idx_inequ] = df / (self.dimension * dG[idx_inequ] + 1e-11 * (df + 1))
@@ -1009,14 +1019,8 @@ class AugmentedLagrangian(object):
             # take min or max with existing value depending on the sign average
             # we don't know whether this is necessary
             isclose = np.abs(sign_average) <= 0.2
-            idx1 = _and(_and(_or(isclose,
-                                 _and(_not(self.isequality), sign_average <= 0.2)),
-                             _or(self.mu == 0, self.mu > mu_new)),
-                             idx)  # only decrease
-            idx2 = _and(_and(_and(_not(isclose),
-                                  _or(self.isequality, sign_average > 0.2)),
-                                  self.mu < mu_new),
-                                  idx)  # only increase
+            idx1 = _and(_and(_or(isclose, _and(_not(self.isequality), sign_average <= 0.2)), _or(self.mu == 0, self.mu > mu_new)), idx)  # only decrease
+            idx2 = _and(_and(_and(_not(isclose), _or(self.isequality, sign_average > 0.2)), self.mu < mu_new), idx)  # only increase
             idx3 = _and(idx, _not(_or(idx1, idx2)))  # others
             assert np.sum(_and(idx1, idx2)) == 0
             if np.any(idx1):  # decrease
@@ -1030,12 +1034,9 @@ class AugmentedLagrangian(object):
                 self.mu[idx3] = mu_new[idx3]
             if 11 < 3:  # simple version, this may be good enough
                 self.mu[idx] = mu_new[idx]
-            self._initialized[_and(idx, _or(self.count > 2 + self.dimension,  # in case sign average remains 1
-                                            np.abs(sign_average) < 0.8))] = True
+            self._initialized[_and(idx, _or(self.count > 2 + self.dimension, np.abs(sign_average) < 0.8))] = True  # in case sign average remains 1
         elif all(self._initialized) and all(self.mu > 0):
-            _warnings.warn(
-                "Coefficients are already fully initialized. This can (only?) happen if\n"
-                "the coefficients are set before the `_initialized` array.")
+            _warnings.warn("Coefficients are already fully initialized. This can (only?) happen if\n" "the coefficients are set before the `_initialized` array.")
 
     @property
     def isequality(self):
@@ -1052,24 +1053,24 @@ class AugmentedLagrangian(object):
         Penalties are zero in the optimum and can be negative down to
         ``-lam**2 / mu / 2``.
         """
-        try: self.count_g_in_penalized_domain += self.mu * g > -1 * self.lam
-        except TypeError: pass
+        try:
+            self.count_g_in_penalized_domain += self.mu * g > -1 * self.lam
+        except TypeError:
+            pass
         for i in range(len(g)):
             self.g_all[i].append(g[i])
         if self.lam is None:
-            return [0.] * len(g)
+            return [0.0] * len(g)
         assert len(self.lam) == len(self.mu)
         if len(g) != len(self.lam):
-            raise ValueError("len(g) = %d != %d = # of Lagrange coefficients"
-                             % (len(g), len(self.lam)))
-        assert self._equality.dtype == 'bool'
+            raise ValueError("len(g) = %d != %d = # of Lagrange coefficients" % (len(g), len(self.lam)))
+        assert self._equality.dtype == "bool"
         idx = _and(_not(self._equality), self.mu * g < -1 * self.lam)
         if any(idx):
             g = np.array(g, copy=True)
             g[idx] = -self.lam[idx] / self.mu[idx]
         self.count_calls += 1
-        return [self.lam[i] * g[i] + 0.5 * self.mu[i] * g[i]**2
-                for i in range(len(g))]
+        return [self.lam[i] * g[i] + 0.5 * self.mu[i] * g[i] ** 2 for i in range(len(g))]
 
     def muplus2(self, g, i, threshold=0.4):
         """provisorial function to correct mu plus condition, original is `True`"""
@@ -1077,12 +1078,14 @@ class AugmentedLagrangian(object):
         n = int(1 + self.dimension**0.5)  # number of data to compute cdf
         cplus = not threshold < self.g_history.cdf(i, len_=n + n % 2) < 1 - threshold
         return cplus and g[i] * self.g[i] > 0
+
     def muminus2(self, g, i, threshold=0.05):
         """provisorial function to correct mu minus condition, original is `True`"""
         res = threshold < self.g_history.cdf(i) < 1 - threshold
-        #if not res:
+        # if not res:
         #    print('muminus1 %f threshold triggered var %d: %f' % (threshold, i, self.g_history.cdf(i)))
         return res
+
     def muplus3(self, g, i, threshold=0.95):
         """return `True` if mu should be increased, else `False`"""
         if g[i] > 0:
@@ -1090,13 +1093,14 @@ class AugmentedLagrangian(object):
         if g[i] * self.mu[i] > -self.lam[i]:  # in penalized but feasible domain
             p_feas = self.g_history.cdf(i, len_=self.mucdf3_horizon)
             # p_feas = self.g_all[i].cdf1(len_=n)  # TODO: try to understand why this leads to increase of mu on a linear fct with n linear constraints
-                                                   #       p_feas seem to be smaller than 0.5, but why?
+            #       p_feas seem to be smaller than 0.5, but why?
             if p_feas > threshold:
                 """too many feasible solutions were penalized, the constraint may be inactive,
                 hence we move the penalization boundary closer to the constraint boundary by
                 increasing mu"""
                 return True
         return False
+
     def muminus3(self, g, i, threshold=0.9):
         """return `True` if mu should be reduced, else `False`"""
         p_feas = self.g_history.cdf(i, len_=self.mucdf3_horizon)
@@ -1109,7 +1113,7 @@ class AugmentedLagrangian(object):
 
     def muplus4(self, g, i, threshold=0.95):
         """return `True` if mu should be increased, else `False`"""
-        if self.g_all[i].cdf1(len_=2*self.dimension) == 0:  # all samples were infeasible
+        if self.g_all[i].cdf1(len_=2 * self.dimension) == 0:  # all samples were infeasible
             return True
         if g[i] * self.mu[i] > -self.lam[i]:  # in penalized but feasible domain
             p_feas = self.g_history.cdf(i, len_=self.mucdf3_horizon)
@@ -1119,10 +1123,10 @@ class AugmentedLagrangian(object):
                 increasing mu"""
                 return True
         return False
+
     def muminus4(self, g, i, threshold=0.9):
         """return `True` if mu should be reduced, else `False`"""
-        if g[i] * self.mu[i] < -1 * self.lam[i] and (
-                self.g_all[i].cdf1(len_=2*self.dimension) < 1):
+        if g[i] * self.mu[i] < -1 * self.lam[i] and (self.g_all[i].cdf1(len_=2 * self.dimension) < 1):
             """g is feasible but penalized and >10% are infeasible"""
             return True
         return False
@@ -1138,11 +1142,12 @@ class AugmentedLagrangian(object):
         """
         self.g_history.append(g)  # is a deque with maxlen
         if self.lam is None:
-            try: self._count_noupdate += 1
-            except AttributeError: self._count_noupdate = 1
+            try:
+                self._count_noupdate += 1
+            except AttributeError:
+                self._count_noupdate = 1
             if self._count_noupdate % (1 + self._count_noupdate**0.5) < 1:
-                _warnings.warn("no update for %d calls (`lam` and `mu` need "
-                               "to be initialized first)" % self._count_noupdate)
+                _warnings.warn("no update for %d calls (`lam` and `mu` need " "to be initialized first)" % self._count_noupdate)
             return
         if self.m == 0:
             return
@@ -1150,22 +1155,19 @@ class AugmentedLagrangian(object):
         if self.g is not None and np.any(self.mu > 0):  # mu==0 makes a zero update anyway
             assert len(self.lam) == len(self.mu) == len(g)
             if 11 < 3 and not self.count and self.chi_domega < 1.05:
-                _warnings.warn("chi_omega=%f as by default, however values <<1.1 may not work well"
-                                % self.chi_domega)
+                _warnings.warn("chi_omega=%f as by default, however values <<1.1 may not work well" % self.chi_domega)
             dg = np.asarray(g) - self.g
             dh = f + sum(self(g)) - self.f - sum(self(self.g))  # using the same coefficients
             self.count_mu_last_same_changes.init(len(self.mu))
             for i in range(len(self.lam)):
                 if self.logging > 0 and not (self.count + 1) % self.logging and self.logger_mu_conditions:
-                    condk1 = bool(self.mu[i] * g[i]**2 < self.k1 * np.abs(dh) / self.dimension)
+                    condk1 = bool(self.mu[i] * g[i] ** 2 < self.k1 * np.abs(dh) / self.dimension)
                     condk2 = bool(self.k2 * np.abs(dg[i]) < np.abs(self.g[i]))
-                    self.logger_mu_conditions.add(i - 0.1 + 0.25 * np.asarray(
-                                [max((condk1, condk2)), 1.25 + condk1, 2.5 + condk2]))
+                    self.logger_mu_conditions.add(i - 0.1 + 0.25 * np.asarray([max((condk1, condk2)), 1.25 + condk1, 2.5 + condk2]))
                 if self.mu[i] == 0:
                     continue  # for mu==0 all updates are zero anyway
                 # lambda update unless constraint is entirely inactive
-                if self.isequality[i] or g[i] * self.mu[i] > -self.lam[i] or (
-                    not is_(self.count_g_in_penalized_domain) or self.count_g_in_penalized_domain[i] > 0):
+                if self.isequality[i] or g[i] * self.mu[i] > -self.lam[i] or (not is_(self.count_g_in_penalized_domain) or self.count_g_in_penalized_domain[i] > 0):
                     # in the original algorithm this update is unconditional
                     self.lam[i] += self.mu[i] * g[i] / self.dgamma
                 if not self.isequality[i] and self.lam[i] < 0:  # clamp to zero
@@ -1179,37 +1181,31 @@ class AugmentedLagrangian(object):
                     # prevent that mu diverges temporarily (as observed)
                 # mu update
                 if self.algorithm == 1:
-                    if self.mu[i] * g[i]**2 < self.k1 * np.abs(dh) / self.dimension or (
-                        self.k2 * np.abs(dg[i]) < np.abs(self.g[i])):  # this condition is always true if constraint i is not active
+                    if self.mu[i] * g[i] ** 2 < self.k1 * np.abs(dh) / self.dimension or (self.k2 * np.abs(dg[i]) < np.abs(self.g[i])):  # this condition is always true if constraint i is not active
                         self.mu[i] *= self.chi_domega**0.25  # 4 / 1 is the stationary odds ratio of increment / decrement
                     else:
                         self.mu[i] /= self.chi_domega
                 elif self.algorithm == 2:
-                    if self.mu[i] * g[i]**2 < self.k1 * np.abs(dh) / self.dimension or (
-                        self.k2 * np.abs(dg[i]) < np.abs(self.g[i])):  # this condition is always true if constraint i is not active
-                        self.counts['%d:muup0' % i] += 1
+                    if self.mu[i] * g[i] ** 2 < self.k1 * np.abs(dh) / self.dimension or (self.k2 * np.abs(dg[i]) < np.abs(self.g[i])):  # this condition is always true if constraint i is not active
+                        self.counts["%d:muup0" % i] += 1
                         if self.muplus2(g, i):
                             self.mu[i] *= self.chi_domega**0.25  # 4 / 1 is the stationary odds ratio of increment / decrement
-                            self.counts['%d:muup1' % i] += 1
+                            self.counts["%d:muup1" % i] += 1
                     else:
-                        self.counts['%d:mudown0' % i] += 1  # only for the record
+                        self.counts["%d:mudown0" % i] += 1  # only for the record
                         if self.muminus2(g, i):
-                            self.counts['%d:mudown1' % i] += 1
+                            self.counts["%d:mudown1" % i] += 1
                             self.mu[i] /= self.chi_domega
                 elif self.algorithm in (0, 3):
                     if self.muplus3(g, i):
-                        self.mu[i] *= self.chi_domega**(0.25 * (1 +
-                            self.count_mu_last_same_changes.update(i, 1).shape_exponent(i)))
+                        self.mu[i] *= self.chi_domega ** (0.25 * (1 + self.count_mu_last_same_changes.update(i, 1).shape_exponent(i)))
                     elif self.muminus3(g, i):
-                        self.mu[i] *= self.chi_domega**(-0.25 * (1 -
-                            self.count_mu_last_same_changes.update(i, -1).shape_exponent(i)))
+                        self.mu[i] *= self.chi_domega ** (-0.25 * (1 - self.count_mu_last_same_changes.update(i, -1).shape_exponent(i)))
                 elif self.algorithm == 4:
                     if self.muplus4(g, i):
-                        self.mu[i] *= self.chi_domega**(0.25 * (1 +
-                            self.count_mu_last_same_changes.update(i, 1).shape_exponent(i)))
+                        self.mu[i] *= self.chi_domega ** (0.25 * (1 + self.count_mu_last_same_changes.update(i, 1).shape_exponent(i)))
                     elif self.muminus4(g, i):
-                        self.mu[i] *= self.chi_domega**(-0.25 * (1 -
-                            self.count_mu_last_same_changes.update(i, -1).shape_exponent(i)))
+                        self.mu[i] *= self.chi_domega ** (-0.25 * (1 - self.count_mu_last_same_changes.update(i, -1).shape_exponent(i)))
                 else:
                     raise NotImplemented("algorithm number {} is not known".format(self.algorithm))
             self.count += 1
@@ -1221,9 +1217,12 @@ class AugmentedLagrangian(object):
                 logger.push()
             self.logger_mu_conditions and self.logger_mu_conditions.push()
 
+
 def _get_favorite_solution(es):
     "avoid unpicklable lambda construct"
     return es.ask(1, sigma_fac=0)[0]
+
+
 class ConstrainedFitnessAL:
     """Construct an unconstrained objective function from constraints.
 
@@ -1294,7 +1293,7 @@ class ConstrainedFitnessAL:
     (g_i > 0) x g_i^2`` and omits ``f + sum_i lam_i g_i`` altogether.
     Whenever a feasible solution is found, the `finding_feasible` flag is
     reset to `False`.
-    
+
     `find_feasible(es)` sets ``finding_feasible = True`` and uses
     `es.optimize` to optimize `self.__call__`. This works well with
     `CMAEvolutionStrategy` but may easily fail with solvers that do not
@@ -1310,17 +1309,21 @@ class ConstrainedFitnessAL:
     inequality constraints [h <= 0, -h <= 0], which seems to work perfectly
     well. The underlying `AugmentedLagrangian` class also accepts equality
     constraints.
+    """
 
-"""
     archive_aggregators = (_g_pos_max, _g_pos_sum, _g_pos_squared_sum)
-    def __init__(self, fun, constraints,
-                 dimension=None,
-                 which='best',
-                 find_feasible_first=False,
-                 get_solution=_get_favorite_solution,
-                 logging=None,
-                 archives=archive_aggregators,
-                 ):
+
+    def __init__(
+        self,
+        fun,
+        constraints,
+        dimension=None,
+        which="best",
+        find_feasible_first=False,
+        get_solution=_get_favorite_solution,
+        logging=None,
+        archives=archive_aggregators,
+    ):
         """constructor with lazy initialization.
 
         If ``which in ['mean', 'solution']``, `get_solution` is called
@@ -1356,29 +1359,32 @@ class ConstrainedFitnessAL:
             self.archives = [ConstrainedSolutionsArchive(fun) for fun in archives]
         except TypeError:  # treat archives as flag
             if archives:
-                self.archives = [ConstrainedSolutionsArchive(fun) for fun in
-                                 ConstrainedFitnessAL.archive_aggregators]
+                self.archives = [ConstrainedSolutionsArchive(fun) for fun in ConstrainedFitnessAL.archive_aggregators]
             else:
                 self.archives = []
+
     def _reset(self):
         self._al = None
         self.F = []
         self.G = []
         self.F_plus_sum_al_G = []
         self.foffset = 0  # not in use yet
-        self.best_aug  = BestSolution2()
+        self.best_aug = BestSolution2()
         self.best_feas = BestSolution2()
         self.best_f_plus_gpos = BestSolution2()
         self.count_calls = 0
         self.count_updates = 0
         self._set_coefficient_counts = []
+
     def reset(self):
         """reset dynamic components"""
         self._reset()
         self._reset_archives()
+
     def _reset_archives(self):
         for i, a in enumerate(self.archives):
             self.archives[i] = ConstrainedSolutionsArchive(a.aggregator)
+
     def _reset_arrays(self):
         self.F, self.G, self.F_plus_sum_al_G = [], [], []
 
@@ -1427,7 +1433,7 @@ class ConstrainedFitnessAL:
         self._update_best(x, self.F[-1], self.G[-1], g_al)
         return self.F_plus_sum_al_G[-1] - self.foffset
 
-    def find_feasible(self, es, termination=('maxiter', 'maxfevals'), aggregator=None):  # es: OOOptimizer, find_feasible -> solution
+    def find_feasible(self, es, termination=("maxiter", "maxfevals"), aggregator=None):  # es: OOOptimizer, find_feasible -> solution
         """find feasible solution by calling ``es.optimize(self)``.
 
         Return best ever feasible solution `self.best_feas.x`.
@@ -1440,7 +1446,7 @@ class ConstrainedFitnessAL:
 
         Terminate when either (another) feasible solution was found or any
         of the `termination` keys is matched in `es.stop()`.
-    """
+        """
         # we could compare self.best_feas.count with self.count_call
         # but can't really know whether count_call was done in the last iteration
         self.finding_feasible = True
@@ -1448,8 +1454,7 @@ class ConstrainedFitnessAL:
         if self.finding_feasible:  # was set back to False when xfavorite was feasible
             if aggregator:  # set objective
                 self.find_feasible_aggregator, aggregator_ = aggregator, self.find_feasible_aggregator
-            while self.finding_feasible and not any(any(d == m for m in termination)
-                                                    for d in es.stop()):
+            while self.finding_feasible and not any(any(d == m for m in termination) for d in es.stop()):
                 X = es.ask()
                 es.tell(X, [self(x) for x in X])
                 self.update(es)  # calls fun if finding_feasible finished and method is not 'best'
@@ -1460,9 +1465,7 @@ class ConstrainedFitnessAL:
                 self.find_feasible_aggregator = aggregator_
         # warn when no feasible solution was found
         if self.best_feas.x is None or self.finding_feasible:
-            _warnings.warn("ConstrainedFitnessAL.find_feasible: "
-                           " No {}feasible solution found, stop() == {}".format(
-                               "new " if self.best_feas.x is not None else "", es.stop()))
+            _warnings.warn("ConstrainedFitnessAL.find_feasible: " " No {}feasible solution found, stop() == {}".format("new " if self.best_feas.x is not None else "", es.stop()))
         assert self.best_feas.x is not None or self.finding_feasible, (self.best_feas, self.finding_feasible)
         return self.best_feas.x
 
@@ -1474,7 +1477,7 @@ class ConstrainedFitnessAL:
 
     def _fg_values(self, es):
         """f, g values used to update the Augmented Lagrangian coefficients"""
-        if self.which == 'mean' or self.which == 'solution':
+        if self.which == "mean" or self.which == "solution":
             self(self.get_solution(es))  # also update best and in case reset finding_feasible
             return self.F[-1], self.G[-1]
         else:
@@ -1485,7 +1488,7 @@ class ConstrainedFitnessAL:
         if g_al is None:
             g_al = self.al(g)
         d = constraints_info_dict(self.count_calls, x, f, g, g_al)
-        self.best_aug.update(d['f_al'], x, d)
+        self.best_aug.update(d["f_al"], x, d)
         self.best_f_plus_gpos.update(f + sum([gi for gi in g if gi > 0]), x, d)
         if self._is_feasible(g):
             self.best_feas.update(f, x, d)
@@ -1502,9 +1505,7 @@ class ConstrainedFitnessAL:
               When method is not best, it should work without even call self(xfavorite).
         """
         if not len(self.F) == len(self.G) == len(self.F_plus_sum_al_G):
-            _warnings.warn("len(F, G, F_plus_sum_al_G) = ({}, {}, {}) differ."
-                           "This is probably a bug!".format(
-                           len(self.F), len(self.G), len(self.F_plus_sum_al_G)))
+            _warnings.warn("len(F, G, F_plus_sum_al_G) = ({}, {}, {}) differ." "This is probably a bug!".format(len(self.F), len(self.G), len(self.F_plus_sum_al_G)))
         if len(self.G) == 0:  # TODO: we could first self(es.result.xfavorite) and should be fine
             # Caveat: here we rely on the fact that log_in_es aggregates [np.nan] smoothly
             self.log_in_es(es, np.nan, [np.nan])  # TODO: we could use self.best_feas
@@ -1563,9 +1564,9 @@ class ConstrainedFitnessAL:
         n_infeas = sum(gi > 0 for gi in g)
         # al_pen = sum(self.al(g))  # Lagrange penalization, equals zero initially, may also be negative
         try:
-            es.more_to_write += [g_pos if g_pos else np.nan,  # nan avoids zero in log plot
-                                 10**(n_infeas / 10) if n_infeas < 10 else n_infeas,  # symlog-like
-                                 ]
+            es.more_to_write += [
+                g_pos if g_pos else np.nan,  # nan avoids zero in log plot
+                10 ** (n_infeas / 10) if n_infeas < 10 else n_infeas,  # symlog-like
+            ]
         except:
             pass
-

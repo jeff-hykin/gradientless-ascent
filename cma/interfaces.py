@@ -1,18 +1,29 @@
 """Very few interface defining base class definitions"""
-from __future__ import absolute_import, division, print_function  #, unicode_literals
+from __future__ import absolute_import, division, print_function  # , unicode_literals
 import warnings
-try: from .optimization_tools import EvalParallel2
-except: EvalParallel2 = None
-del absolute_import, division, print_function  #, unicode_literals
+
+try:
+    from .optimization_tools import EvalParallel2
+except:
+    EvalParallel2 = None
+del absolute_import, division, print_function  # , unicode_literals
+
 
 class EvalParallel:
     """allow construct ``with EvalParallel(fun) as eval_all:``"""
+
     def __init__(self, fun, *args, **kwargs):
         self.fun = fun
+
     def __call__(self, X, args=()):
         return [self.fun(x, *args) for x in X]
-    def __enter__(self): return self
-    def __exit__(self, *args, **kwargs): pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args, **kwargs):
+        pass
+
 
 class OOOptimizer(object):
     """abstract base class for an Object Oriented Optimizer interface.
@@ -71,30 +82,34 @@ class OOOptimizer(object):
     -------
     Most of the work is done in the methods `tell` or `ask`. The property
     `result` provides more useful output.
+    """
 
-"""
     def __init__(self, xstart, *more_mandatory_args, **optional_kwargs):
         """``xstart`` is a mandatory argument"""
         self.xstart = xstart
         self.more_mandatory_args = more_mandatory_args
         self.optional_kwargs = optional_kwargs
         self.initialize()
+
     def initialize(self):
         """(re-)set to the initial state"""
-        raise NotImplementedError('method initialize() must be implemented in derived class')
+        raise NotImplementedError("method initialize() must be implemented in derived class")
         self.countiter = 0
         self.xcurrent = [xi for xi in self.xstart]
+
     def ask(self, **optional_kwargs):
         """abstract method, AKA "get" or "sample_distribution", deliver
         new candidate solution(s), a list of "vectors"
         """
-        raise NotImplementedError('method ask() must be implemented in derived class')
+        raise NotImplementedError("method ask() must be implemented in derived class")
+
     def tell(self, solutions, function_values):
         """abstract method, AKA "update", pass f-values and prepare for
         next iteration
         """
         self.countiter += 1
-        raise NotImplementedError('method tell() must be implemented in derived class')
+        raise NotImplementedError("method tell() must be implemented in derived class")
+
     def stop(self):
         """abstract method, return satisfied termination conditions in a
         dictionary like ``{'termination reason': value, ...}`` or ``{}``.
@@ -104,27 +119,23 @@ class OOOptimizer(object):
         TODO: this should rather be a property!? Unfortunately, a change
         would break backwards compatibility.
         """
-        raise NotImplementedError('method stop() is not implemented')
+        raise NotImplementedError("method stop() is not implemented")
+
     def disp(self, modulo=None):
         """abstract method, display some iteration info when
         ``self.iteration_counter % modulo < 1``, using a reasonable
         default for `modulo` if ``modulo is None``.
         """
+
     @property
     def result(self):
         """abstract property, contain ``(x, f(x), ...)``, that is, the
         minimizer, its function value, ...
         """
-        raise NotImplementedError('result property is not implemented')
+        raise NotImplementedError("result property is not implemented")
         return [self.xcurrent]
 
-    def optimize(self, objective_fct,
-                 maxfun=None, iterations=None, min_iterations=1,
-                 args=(),
-                 verb_disp=None,
-                 callback=None,
-                 n_jobs=0,
-                 **kwargs):
+    def optimize(self, objective_fct, maxfun=None, iterations=None, min_iterations=1, args=(), verb_disp=None, callback=None, n_jobs=0, **kwargs):
         """find minimizer of ``objective_fct``.
 
         CAVEAT: the return value for `optimize` has changed to ``self``,
@@ -181,25 +192,20 @@ class OOOptimizer(object):
         >>> cma.s.Mh.vequals_approximately(es.result[0], 7 * [1], 1e-5)
         True
 
-    """
+        """
         if kwargs:
-            message = "ignoring unkown argument%s %s in OOOptimizer.optimize" % (
-                's' if len(kwargs) > 1 else '', str(kwargs))
-            warnings.warn(
-                message)  # warnings.simplefilter('ignore', lineno=186) suppresses this warning
+            message = "ignoring unkown argument%s %s in OOOptimizer.optimize" % ("s" if len(kwargs) > 1 else "", str(kwargs))
+            warnings.warn(message)  # warnings.simplefilter('ignore', lineno=186) suppresses this warning
 
         if iterations is not None and min_iterations > iterations:
-            warnings.warn("doing min_iterations = %d > %d = iterations"
-                  % (min_iterations, iterations))
+            warnings.warn("doing min_iterations = %d > %d = iterations" % (min_iterations, iterations))
             iterations = min_iterations
         callback = self._prepare_callback_list(callback)
 
         citer, cevals = 0, 0
-        with (EvalParallel2 or EvalParallel)(objective_fct,
-                            None if n_jobs == -1 else n_jobs) as eval_all:
+        with (EvalParallel2 or EvalParallel)(objective_fct, None if n_jobs == -1 else n_jobs) as eval_all:
             while not self.stop() or citer < min_iterations:
-                if (maxfun and cevals >= maxfun) or (
-                    iterations and citer >= iterations):
+                if (maxfun and cevals >= maxfun) or (iterations and citer >= iterations):
                     return self
                 citer += 1
 
@@ -217,9 +223,9 @@ class OOOptimizer(object):
 
         if verb_disp:  # do not print by default to allow silent verbosity
             self.disp(1)
-            print('termination by', self.stop())
-            print('best f-value =', self.result[1])
-            print('solution =', self.result[0])
+            print("termination by", self.stop())
+            print("best f-value =", self.result[1])
+            print("solution =", self.result[0])
 
         return self
 
@@ -240,12 +246,18 @@ class OOOptimizer(object):
         try:
             for c in callback:
                 if not callable(c):
-                    raise ValueError("""callback argument %s is not
-                        callable""" % str(c))
+                    raise ValueError(
+                        """callback argument %s is not
+                        callable"""
+                        % str(c)
+                    )
         except TypeError:
-            raise ValueError("""callback argument must be a `callable` or
+            raise ValueError(
+                """callback argument must be a `callable` or
                 an iterable (e.g. a list) of callables, after some
-                processing it was %s""" % str(callback))
+                processing it was %s"""
+                % str(callback)
+            )
         return callback
 
     def _force_final_logging(self):  # helper function
@@ -268,15 +280,14 @@ class OOOptimizer(object):
             try:
                 self.logger.add(self)
             except Exception as e:
-                print('  The final call of the logger in'
-                      ' OOOptimizer._force_final_logging from'
-                      ' OOOptimizer.optimize did not succeed: %s'
-                      % str(e))
+                print("  The final call of the logger in" " OOOptimizer._force_final_logging from" " OOOptimizer.optimize did not succeed: %s" % str(e))
+
 
 class StatisticalModelSamplerWithZeroMeanBaseClass(object):
     """yet versatile base class to replace a sampler namely in
     `CMAEvolutionStrategy`
     """
+
     def __init__(self, std_vec, **kwargs):
         """pass the vector of initial standard deviations or dimension of
         the underlying sample space.
@@ -309,9 +320,7 @@ class StatisticalModelSamplerWithZeroMeanBaseClass(object):
         """return `dict` with (default) parameters, e.g., `c1` and `cmu`.
 
         :See also: `RecombinationWeights`"""
-        if (hasattr(self, '_mueff') and hasattr(self, '_lam') and
-            (mueff == self._mueff or mueff is None) and
-            (lam == self._lam or lam is None)):
+        if hasattr(self, "_mueff") and hasattr(self, "_lam") and (mueff == self._mueff or mueff is None) and (lam == self._lam or lam is None):
             return self._parameters
         self._mueff = mueff
         lower_lam = 6  # for setting c1
@@ -320,27 +329,33 @@ class StatisticalModelSamplerWithZeroMeanBaseClass(object):
         self._lam = lam
         # todo: put here rather generic formula with degrees of freedom
         # todo: replace these base class computations with the appropriate
-        c1 = min((1, lam / lower_lam)) * 2 / ((self.dimension + 1.3)**2.0 + mueff)
+        c1 = min((1, lam / lower_lam)) * 2 / ((self.dimension + 1.3) ** 2.0 + mueff)
         alpha = 2
         self._parameters = dict(
             c1=c1,
-            cmu=min((1 - c1,
-                     # or alpha * (mueff - 0.9) with relative min and
-                     # max value of about 1: 0.4, 1.75: 1.5
-                     alpha * (0.25 + mueff - 2 + 1 / mueff) /
-                     ((self.dimension + 2)**2 + alpha * mueff / 2)))
+            cmu=min(
+                (
+                    1 - c1,
+                    # or alpha * (mueff - 0.9) with relative min and
+                    # max value of about 1: 0.4, 1.75: 1.5
+                    alpha * (0.25 + mueff - 2 + 1 / mueff) / ((self.dimension + 2) ** 2 + alpha * mueff / 2),
+                )
+            ),
         )
         return self._parameters
 
     def norm(self, x):
         """return Mahalanobis norm of `x` w.r.t. the statistical model"""
-        return sum(self.transform_inverse(x)**2)**0.5
+        return sum(self.transform_inverse(x) ** 2) ** 0.5
+
     @property
     def condition_number(self):
         raise NotImplementedError
+
     @property
     def covariance_matrix(self):
         raise NotImplementedError
+
     @property
     def variances(self):
         """vector of coordinate-wise (marginal) variances"""
@@ -369,6 +384,7 @@ class StatisticalModelSamplerWithZeroMeanBaseClass(object):
 
     def __imul__(self, factor):
         raise NotImplementedError
+
 
 class BaseDataLogger(object):
     """abstract base class for a data logger that can be used with an
@@ -403,23 +419,25 @@ class BaseDataLogger(object):
 
     def disp(self, *args, **kwargs):
         """abstract method, display some data trace"""
-        print('method BaseDataLogger.disp() not implemented, to be done in subclass ' + str(type(self)))
+        print("method BaseDataLogger.disp() not implemented, to be done in subclass " + str(type(self)))
 
     def plot(self, *args, **kwargs):
         """abstract method, plot data"""
-        print('method BaseDataLogger.plot() is not implemented, to be done in subclass ' + str(type(self)))
+        print("method BaseDataLogger.plot() is not implemented, to be done in subclass " + str(type(self)))
 
     def save(self, name=None):
         """save data to file `name` or `self.filename`"""
-        with open(name or self.filename, 'w') as f:
+        with open(name or self.filename, "w") as f:
             f.write(repr(self._data))
 
     def load(self, name=None):
         """load data from file `name` or `self.filename`"""
         from ast import literal_eval
-        with open(name or self.filename, 'r') as f:
+
+        with open(name or self.filename, "r") as f:
             self._data = literal_eval(f.read())
         return self
+
     @property
     def data(self):
         """logged data in a dictionary"""
